@@ -110,7 +110,7 @@ export default function ApiDocsPage() {
       <Card>
         <h2 className="text-xl font-semibold">Why FilterCalls API</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <p className="text-sm text-muted">Intent-aware model: classify probable motive, not just "spam vs safe".</p>
+          <p className="text-sm text-muted">Intent-aware model: classify probable motive, not just &quot;spam vs safe&quot;.</p>
           <p className="text-sm text-muted">Hybrid intelligence: external metadata + internal scoring engine.</p>
           <p className="text-sm text-muted">Explainable outputs: weighted signals and readable reasoning.</p>
           <p className="text-sm text-muted">Designed for system automation and human decision support.</p>
