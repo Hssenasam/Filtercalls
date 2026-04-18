@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getPhoneProvider } from '@/lib/providers/phone-provider';
+import { NextResponse } from 'next/server';
+import { analyzeNumberV2 } from '@/lib/engine';
 
 export const runtime = 'edge';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { number, country } = (await request.json()) as { number?: string; country?: string };
 
@@ -11,10 +11,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid number supplied' }, { status: 400 });
     }
 
-    const provider = getPhoneProvider();
-    const result = await provider.analyze(number, country);
-    return NextResponse.json(result);
-  } catch {
+    const search = new URL(request.url).searchParams;
+    const queryFresh = search.get('fresh') === '1';
+
+    const { result, cacheStatus } = await analyzeNumberV2(number, country, queryFresh);
+    const response = NextResponse.json(result, { status: 200 });
+    response.headers.set('x-fc-cache', cacheStatus);
+    return response;
+  } catch (error) {
+    if (error instanceof Error && (error.message === 'COUNTRY_REQUIRED' || error.message === 'INVALID_NUMBER')) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json({ error: 'Analysis request failed' }, { status: 500 });
   }
 }
