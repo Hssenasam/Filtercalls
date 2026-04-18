@@ -1,0 +1,7 @@
+name = "filtercalls"
+compatibility_date = "2026-04-17"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
+
+[vars]
+NEXT_TELEMETRY_DISABLED = "1"

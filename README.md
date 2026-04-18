@@ -1,0 +1,84 @@
+# FilterCalls
+
+FilterCalls is a Cloudflare-friendly **Call Intent Intelligence Platform** built with Next.js App Router and TypeScript.
+
+## Product highlights
+
+- Intent-based call analysis (not just spam vs safe)
+- Dual score model (risk + trust)
+- Recommended-action engine (block/silence/vm/caution/answer)
+- Signal breakdown UI for transparent decision support
+- Dual audience messaging for individuals and API-first businesses
+- Cloudflare Pages-compatible API route architecture (Edge runtime)
+
+## Stack
+
+- Next.js (App Router)
+- TypeScript
+- Tailwind CSS
+- Framer Motion
+- Lucide icons
+
+## Local development
+
+```bash
+npm install
+npm run dev
+```
+
+Open http://localhost:3000.
+
+## Environment variables
+
+Copy env template:
+
+```bash
+cp .env.example .env.local
+```
+
+- `APILAYER_KEY` (optional): API key for the APILayer Number Verification provider.
+
+## Hybrid intelligence architecture
+
+FilterCalls uses a hybrid pipeline:
+
+1. **External metadata (APILayer)** for number validity, country, region, carrier, line type, and formatting.
+2. **Internal intent engine** for deterministic scoring and decision logic (risk/trust/intent/nuisance/action).
+
+If `APILAYER_KEY` is not set, or if the provider request fails, the system automatically falls back to internal analysis without breaking the API contract.
+
+External metadata is normalized before scoring and mapped into the stable internal output model (`formatted_number`, `country`, `region`, `carrier`, `line_type`, `is_valid`).
+
+## API endpoint
+
+### `POST /api/analyze`
+
+Request body:
+
+```json
+{
+  "number": "+14155550142",
+  "country": "US"
+}
+```
+
+Response includes:
+
+- `risk_score`
+- `trust_score`
+- `nuisance_level`
+- `probable_intent`
+- `recommended_action`
+- `signals[]`
+
+## Deployment to Cloudflare Pages
+
+Use Next.js on Cloudflare Pages Functions.
+
+1. Push this repository.
+2. Connect to Cloudflare Pages.
+3. Set build command: `npm run build`.
+4. Set output: `.vercel/output/static` (if using adapter) or deploy via OpenNext Cloudflare pipeline.
+5. Add environment variables in Pages settings.
+
+For production, pair with Cloudflare-compatible Next adapter (OpenNext for Cloudflare) and keep route handlers in edge runtime for low latency.

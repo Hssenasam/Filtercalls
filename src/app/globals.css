@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #070a12;
+  color: #e7edf7;
+  min-height: 100%;
+}
+
+body {
+  @apply antialiased bg-hero-radial;
+}
+
+::selection {
+  background: rgba(110, 231, 255, 0.25);
+}
+
+.glass {
+  background: linear-gradient(140deg, rgba(16, 22, 40, 0.8), rgba(12, 17, 30, 0.52));
+  border: 1px solid rgba(139, 141, 255, 0.22);
+  backdrop-filter: blur(12px);
+}
+
+.signal-separator {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(110, 231, 255, 0.7), transparent);
+}
