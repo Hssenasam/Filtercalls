@@ -1,13 +1,29 @@
 import { runFallbackIntentEngine } from '@/lib/engine/intent-engine';
 import { CallIntentAnalysis } from '@/lib/engine/types';
 
+export class AnalyzeInputError extends Error {
+  constructor(
+    public readonly code: 'COUNTRY_REQUIRED' | 'INVALID_NUMBER',
+    message: string
+  ) {
+    super(message);
+  }
+}
+
 interface PhoneIntelligenceProvider {
   analyze(number: string, country?: string): Promise<CallIntentAnalysis>;
 }
 
 class FallbackProvider implements PhoneIntelligenceProvider {
   async analyze(number: string, country?: string): Promise<CallIntentAnalysis> {
-    return runFallbackIntentEngine(number, { requestedCountry: country });
+    try {
+      return runFallbackIntentEngine(number, { requestedCountry: country });
+    } catch (error) {
+      if (error instanceof Error && (error.message === 'COUNTRY_REQUIRED' || error.message === 'INVALID_NUMBER')) {
+        throw new AnalyzeInputError(error.message, error.message === 'COUNTRY_REQUIRED' ? 'Country is required for local numbers.' : 'Number is invalid.');
+      }
+      throw error;
+    }
   }
 }
 
@@ -26,7 +42,7 @@ class ApiLayerProvider implements PhoneIntelligenceProvider {
         }
       );
 
-      if (!response.ok) throw new Error('External provider failed');
+      if (!response.ok) throw new Error('EXTERNAL_PROVIDER_FAILED');
 
       const payload = (await response.json()) as {
         country_name?: string;
@@ -37,28 +53,28 @@ class ApiLayerProvider implements PhoneIntelligenceProvider {
         valid?: boolean;
       };
 
-      const normalizedLineType = normalizeLineType(payload.line_type);
-
       return runFallbackIntentEngine(number, {
         requestedCountry: country,
         external: {
           country: payload.country_name,
           region: payload.location,
           carrier: payload.carrier,
-          lineType: normalizedLineType,
+          lineType: normalizeLineType(payload.line_type),
           formattedNumber: payload.international_format,
           isValid: payload.valid
         }
       });
-    } catch {
-      return runFallbackIntentEngine(number, { requestedCountry: country });
+    } catch (error) {
+      if (error instanceof Error && (error.message === 'COUNTRY_REQUIRED' || error.message === 'INVALID_NUMBER')) {
+        throw new AnalyzeInputError(error.message, error.message === 'COUNTRY_REQUIRED' ? 'Country is required for local numbers.' : 'Number is invalid.');
+      }
+      return new FallbackProvider().analyze(number, country);
     }
   }
 }
 
 const normalizeLineType = (lineType?: string): CallIntentAnalysis['line_type'] | undefined => {
   if (!lineType) return undefined;
-
   const normalized = lineType.toLowerCase();
   if (normalized.includes('mobile')) return 'mobile';
   if (normalized.includes('landline') || normalized.includes('fixed')) return 'landline';

@@ -40,6 +40,7 @@ export interface CallIntentAnalysis {
   trust_score: number;
   nuisance_level: NuisanceLevel;
   probable_intent: IntentCategory;
+  intent?: IntentCategory;
   confidence: number;
   recommended_action: RecommendedAction;
   signals: CallSignal[];

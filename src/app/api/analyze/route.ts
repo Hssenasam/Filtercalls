@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPhoneProvider } from '@/lib/providers/phone-provider';
+import { AnalyzeInputError, getPhoneProvider } from '@/lib/providers/phone-provider';
 
 export const runtime = 'edge';
 
@@ -14,7 +14,18 @@ export async function POST(request: NextRequest) {
     const provider = getPhoneProvider();
     const result = await provider.analyze(number, country);
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    if (error instanceof AnalyzeInputError) {
+      return NextResponse.json(
+        {
+          error: {
+            code: error.code,
+            message: error.message
+          }
+        },
+        { status: 400 }
+      );
+    }
     return NextResponse.json({ error: 'Analysis request failed' }, { status: 500 });
   }
 }

@@ -7,8 +7,9 @@ import { AnalysisResultCard } from '@/components/analysis/analysis-result-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { getCountryCallingCode } from 'libphonenumber-js/min';
+import { COUNTRIES } from '@/lib/countries';
 import { CallIntentAnalysis } from '@/lib/engine/types';
-import { countryOptions } from '@/lib/engine/intent-engine';
 
 const digitsOnly = (value: string) => value.replace(/\D/g, '');
 const isExplicitInternational = (value: string) => value.trim().startsWith('+') || value.trim().startsWith('00');
@@ -21,10 +22,17 @@ export const NumberAnalyzer = ({ compact = false }: { compact?: boolean }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const countryDialMap = useMemo(
-    () => new Map(countryOptions.map((entry) => [entry.iso, entry.dialCode])),
-    []
-  );
+  const countryDialMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const countryEntry of COUNTRIES) {
+      try {
+        map.set(countryEntry.iso2, getCountryCallingCode(countryEntry.iso2 as Parameters<typeof getCountryCallingCode>[0]));
+      } catch {
+        map.set(countryEntry.iso2, '1');
+      }
+    }
+    return map;
+  }, []);
 
   const handleCountryChange = (nextCountry: string) => {
     const nextDial = countryDialMap.get(nextCountry) ?? '1';
@@ -109,9 +117,9 @@ export const NumberAnalyzer = ({ compact = false }: { compact?: boolean }) => {
             value={country}
             onChange={(event) => handleCountryChange(event.target.value)}
           >
-            {countryOptions.map((entry) => (
-              <option key={entry.iso} value={entry.iso}>
-                {entry.iso} (+{entry.dialCode})
+            {COUNTRIES.map((entry) => (
+              <option key={entry.iso2} value={entry.iso2}>
+                {entry.iso2} (+{countryDialMap.get(entry.iso2) ?? '1'})
               </option>
             ))}
           </select>
