@@ -5,3 +5,17 @@ pages_build_output_dir = ".vercel/output/static"
 
 [vars]
 NEXT_TELEMETRY_DISABLED = "1"
+PUBLIC_DEMO = "true"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "filtercalls_db"
+database_id = "af0e7514-e7ba-49e5-a5be-29be7ce2c28b"
+
+[[kv_namespaces]]
+binding = "CACHE_LOOKUPS"
+id = "d299d8c5cdd1498c9193bf1aa418eed1"
+
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "a19a34d5b3be4b439647f7b4d2d1d3de"
