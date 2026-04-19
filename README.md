@@ -74,7 +74,7 @@ Response includes:
 
 ### `POST /api/analyze/batch`
 
-Batch analyze up to 25 numbers in one request. Requires `X-API-Key`.
+Batch analyze up to 100 numbers in one request. Requires `X-API-Key`.
 
 ### `GET /api/openapi.json`
 
