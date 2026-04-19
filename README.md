@@ -71,6 +71,15 @@ Response includes:
 - `recommended_action`
 - `signals[]`
 
+
+### `POST /api/analyze/batch`
+
+Batch analyze up to 25 numbers in one request. Requires `X-API-Key`.
+
+### `GET /api/openapi`
+
+Returns OpenAPI 3.1 JSON for the API surface.
+
 ## Deployment to Cloudflare Pages
 
 Use Next.js on Cloudflare Pages Functions.

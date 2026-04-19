@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "pages:build": "npx @cloudflare/next-on-pages"
+    "pages:build": "npx @cloudflare/next-on-pages",
+    "test": "node --test --experimental-strip-types --experimental-specifier-resolution=node src/lib/server/*.test.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.0",
