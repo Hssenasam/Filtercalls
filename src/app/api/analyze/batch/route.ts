@@ -15,7 +15,7 @@ export const runtime = 'edge';
 
 export const OPTIONS = async () => optionsResponse();
 
-const MAX_BATCH_SIZE = 25;
+const MAX_BATCH_SIZE = 100;
 
 type BatchItem = { number?: string; country?: string; id?: string };
 

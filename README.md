@@ -76,7 +76,7 @@ Response includes:
 
 Batch analyze up to 25 numbers in one request. Requires `X-API-Key`.
 
-### `GET /api/openapi`
+### `GET /api/openapi.json`
 
 Returns OpenAPI 3.1 JSON for the API surface.
 
