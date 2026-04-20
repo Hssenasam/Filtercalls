@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { corsHeaders, rateLimitKey, resolveRequestIdFromHeaders } from './phase3-core.ts';
+import { corsHeaders, resolveRequestIdFromHeaders } from './phase3-core.ts';
 
 test('CORS headers include API key and request-id headers', () => {
   assert.equal(corsHeaders['Access-Control-Allow-Origin'], '*');
@@ -10,8 +10,4 @@ test('CORS headers include API key and request-id headers', () => {
 
 test('request id honors caller provided id', () => {
   assert.equal(resolveRequestIdFromHeaders(new Headers({ 'x-request-id': 'req-123' })), 'req-123');
-});
-
-test('rate limit key is deterministic', () => {
-  assert.equal(rateLimitKey('key_a', '1.2.3.4', 123), 'rl:key_a:1.2.3.4:123');
 });

@@ -80,6 +80,18 @@ Batch analyze up to 100 numbers in one request. Requires `X-API-Key`.
 
 Returns OpenAPI 3.1 JSON for the API surface.
 
+### `GET/POST /api/admin/keys` and `DELETE /api/admin/keys/{id}`
+
+Admin-managed API key lifecycle endpoints secured by `X-Admin-Token`. Only key hashes are stored; raw key is shown once on create.
+
+### `GET/POST/DELETE /api/webhooks`
+
+API-key managed webhook configuration endpoints. Webhook delivery supports signed payloads (`X-FC-Signature`) and retries.
+
+### `GET /dashboard`
+
+D1-backed analytics dashboard with masked numbers, rolling windows (24h/7d/30d), top countries, and recent analyses.
+
 ## Deployment to Cloudflare Pages
 
 Use Next.js on Cloudflare Pages Functions.

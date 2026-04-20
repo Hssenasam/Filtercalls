@@ -4,6 +4,7 @@ import {
   authenticateApiKey,
   dispatchWebhooks,
   enforceRateLimit,
+  errorResponse,
   getDb,
   optionsResponse,
   persistAnalysis,
@@ -13,7 +14,7 @@ import {
 
 export const runtime = 'edge';
 
-export const OPTIONS = async () => optionsResponse();
+export const OPTIONS = async (request: NextRequest) => optionsResponse(resolveRequestId(request));
 
 export async function POST(request: NextRequest) {
   const requestId = resolveRequestId(request);
@@ -22,33 +23,32 @@ export async function POST(request: NextRequest) {
     const { number, country } = (await request.json()) as { number?: string; country?: string };
 
     if (!number || number.trim().length < 7) {
-      return withResponseHeaders(NextResponse.json({ error: 'Invalid number supplied' }, { status: 400 }), requestId);
+      return errorResponse(requestId, 'INVALID_NUMBER', 'Invalid number supplied', 400);
     }
 
-    const db = getDb();
     const apiKey = request.headers.get('x-api-key');
-    const apiKeyRecord = await authenticateApiKey(db, apiKey);
+    const apiKeyRecord = await authenticateApiKey(getDb(), apiKey);
 
     if (apiKey && !apiKeyRecord) {
-      return withResponseHeaders(NextResponse.json({ error: 'Invalid API key' }, { status: 401 }), requestId);
+      return errorResponse(requestId, 'UNAUTHORIZED', 'Invalid API key', 401);
     }
 
     if (apiKeyRecord) {
-      const limitResult = await enforceRateLimit(request, apiKeyRecord.id, apiKeyRecord.rate_limit_per_min ?? 60);
+      const limitResult = await enforceRateLimit(request, apiKeyRecord.id, apiKeyRecord.rate_limit_per_min ?? 60, 1);
       if (!limitResult.ok) return withResponseHeaders(limitResult.response, requestId);
     }
 
     const provider = getPhoneProvider();
     const result = await provider.analyze(number, country);
 
-    await persistAnalysis(db, requestId, { number, country, apiKeyId: apiKeyRecord?.id }, result);
+    await persistAnalysis(requestId, { number, country, apiKeyId: apiKeyRecord?.id }, result);
 
     if (apiKeyRecord) {
-      void dispatchWebhooks(db, apiKeyRecord.id, 'analysis.completed', { request_id: requestId, result });
+      void dispatchWebhooks({ request, apiKeyId: apiKeyRecord.id, analysisId: requestId, riskScore: result.risk_score, payload: result });
     }
 
     return withResponseHeaders(NextResponse.json(result), requestId);
   } catch {
-    return withResponseHeaders(NextResponse.json({ error: 'Analysis request failed' }, { status: 500 }), requestId);
+    return errorResponse(requestId, 'ANALYZE_FAILED', 'Analysis request failed', 500);
   }
 }

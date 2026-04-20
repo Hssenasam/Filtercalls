@@ -4,6 +4,7 @@ import {
   authenticateApiKey,
   dispatchWebhooks,
   enforceRateLimit,
+  errorResponse,
   getDb,
   optionsResponse,
   persistAnalysis,
@@ -13,11 +14,13 @@ import {
 
 export const runtime = 'edge';
 
-export const OPTIONS = async () => optionsResponse();
+export const OPTIONS = async (request: NextRequest) => optionsResponse(resolveRequestId(request));
 
 const MAX_BATCH_SIZE = 100;
 
 type BatchItem = { number?: string; country?: string; id?: string };
+
+type BatchResult = { id?: string; result?: unknown; error?: { code: string; message: string } };
 
 export async function POST(request: NextRequest) {
   const requestId = resolveRequestId(request);
@@ -25,10 +28,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as { items?: BatchItem[] };
     if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > MAX_BATCH_SIZE) {
-      return withResponseHeaders(
-        NextResponse.json({ error: `items must be an array between 1 and ${MAX_BATCH_SIZE}` }, { status: 400 }),
-        requestId
-      );
+      return errorResponse(requestId, 'BATCH_TOO_LARGE', `items must be an array between 1 and ${MAX_BATCH_SIZE}`, 400);
     }
 
     const db = getDb();
@@ -36,30 +36,30 @@ export async function POST(request: NextRequest) {
     const apiKeyRecord = await authenticateApiKey(db, apiKey);
 
     if (!apiKeyRecord) {
-      return withResponseHeaders(NextResponse.json({ error: 'Valid API key required for batch endpoint' }, { status: 401 }), requestId);
+      return errorResponse(requestId, 'UNAUTHORIZED', 'Valid API key required for batch endpoint', 401);
     }
 
-    const limitResult = await enforceRateLimit(request, apiKeyRecord.id, apiKeyRecord.rate_limit_per_min ?? 60);
+    const limitResult = await enforceRateLimit(request, apiKeyRecord.id, apiKeyRecord.rate_limit_per_min ?? 60, body.items.length);
     if (!limitResult.ok) return withResponseHeaders(limitResult.response, requestId);
 
     const provider = getPhoneProvider();
-    const results = [] as Array<{ id?: string; result?: unknown; error?: string }>;
+    const results: BatchResult[] = [];
 
     for (const item of body.items) {
       if (!item.number || item.number.trim().length < 7) {
-        results.push({ id: item.id, error: 'Invalid number supplied' });
+        results.push({ id: item.id, error: { code: 'INVALID_NUMBER', message: 'Invalid number supplied' } });
         continue;
       }
 
       const result = await provider.analyze(item.number, item.country);
-      await persistAnalysis(db, crypto.randomUUID(), { number: item.number, country: item.country, apiKeyId: apiKeyRecord.id }, result);
+      const analysisId = crypto.randomUUID();
+      await persistAnalysis(analysisId, { number: item.number, country: item.country, apiKeyId: apiKeyRecord.id }, result);
+      void dispatchWebhooks({ request, apiKeyId: apiKeyRecord.id, analysisId, riskScore: result.risk_score, payload: result });
       results.push({ id: item.id, result });
     }
 
-    void dispatchWebhooks(db, apiKeyRecord.id, 'analysis.completed', { request_id: requestId, batch_size: body.items.length });
-
     return withResponseHeaders(NextResponse.json({ request_id: requestId, count: results.length, results }), requestId);
   } catch {
-    return withResponseHeaders(NextResponse.json({ error: 'Batch analysis request failed' }, { status: 500 }), requestId);
+    return errorResponse(requestId, 'BATCH_ANALYZE_FAILED', 'Batch analysis request failed', 500);
   }
 }

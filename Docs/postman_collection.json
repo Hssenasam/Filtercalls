@@ -1,0 +1,43 @@
+{
+  "info": {
+    "name": "FilterCalls Phase 3",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Analyze",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-API-Key", "value": "{{api_key}}" }],
+        "url": "{{base_url}}/api/analyze",
+        "body": { "mode": "raw", "raw": "{\n  \"number\": \"+14155550142\",\n  \"country\": \"US\"\n}" }
+      }
+    },
+    {
+      "name": "Batch Analyze",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-API-Key", "value": "{{api_key}}" }],
+        "url": "{{base_url}}/api/analyze/batch",
+        "body": { "mode": "raw", "raw": "{\n  \"items\": [{\"id\":\"1\",\"number\":\"+14155550142\",\"country\":\"US\"}]\n}" }
+      }
+    },
+    {
+      "name": "Admin Create Key",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-Admin-Token", "value": "{{admin_token}}" }],
+        "url": "{{base_url}}/api/admin/keys",
+        "body": { "mode": "raw", "raw": "{\"name\":\"integration\",\"rate_limit_per_min\":60}" }
+      }
+    },
+    {
+      "name": "Webhooks",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-API-Key", "value": "{{api_key}}" }],
+        "url": "{{base_url}}/api/webhooks"
+      }
+    }
+  ]
+}

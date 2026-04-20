@@ -9,7 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "pages:build": "npx @cloudflare/next-on-pages",
-    "test": "node --test --experimental-strip-types --experimental-specifier-resolution=node src/lib/server/*.test.ts"
+    "test": "sh -c 'node --test --experimental-strip-types --experimental-specifier-resolution=node $(rg --files -g \"*.test.ts\" src)'"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.0",
