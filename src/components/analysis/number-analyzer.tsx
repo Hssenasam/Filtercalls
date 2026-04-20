@@ -1,75 +1,24 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { LoaderCircle } from 'lucide-react';
 import { AnalysisResultCard } from '@/components/analysis/analysis-result-card';
+import { PhoneInput, detectDefaultCountryFromLocale } from '@/components/PhoneInput';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { CallIntentAnalysis } from '@/lib/engine/types';
-import { countryOptions } from '@/lib/engine/intent-engine';
-
-const digitsOnly = (value: string) => value.replace(/\D/g, '');
-const isExplicitInternational = (value: string) => value.trim().startsWith('+') || value.trim().startsWith('00');
 
 export const NumberAnalyzer = ({ compact = false }: { compact?: boolean }) => {
   const [number, setNumber] = useState('');
   const [country, setCountry] = useState('US');
-  const [prefillMode, setPrefillMode] = useState(false);
   const [result, setResult] = useState<CallIntentAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const countryDialMap = useMemo(
-    () => new Map(countryOptions.map((entry) => [entry.iso, entry.dialCode])),
-    []
-  );
-
-  const handleCountryChange = (nextCountry: string) => {
-    const nextDial = countryDialMap.get(nextCountry) ?? '1';
-    const currentDial = countryDialMap.get(country) ?? '1';
-
-    if (!number.trim()) {
-      setCountry(nextCountry);
-      setNumber(`+${nextDial} `);
-      setPrefillMode(true);
-      return;
-    }
-
-    if (isExplicitInternational(number)) {
-      if (prefillMode && number.trim().startsWith(`+${currentDial}`)) {
-        const digits = digitsOnly(number);
-        const local = digits.slice(currentDial.length);
-        setNumber(`+${nextDial} ${local}`.trim());
-        setPrefillMode(true);
-      }
-      setCountry(nextCountry);
-      return;
-    }
-
-    const localDigits = digitsOnly(number);
-    setNumber(localDigits ? `+${nextDial} ${localDigits}` : `+${nextDial} `);
-    setCountry(nextCountry);
-    setPrefillMode(true);
-  };
-
-  const handleInputChange = (value: string) => {
-    setNumber(value);
-
-    if (!value.trim()) {
-      setPrefillMode(false);
-      return;
-    }
-
-    if (isExplicitInternational(value)) {
-      const selectedDial = countryDialMap.get(country) ?? '1';
-      setPrefillMode(value.trim().startsWith(`+${selectedDial}`));
-      return;
-    }
-
-    setPrefillMode(false);
-  };
+  useEffect(() => {
+    setCountry(detectDefaultCountryFromLocale());
+  }, []);
 
   const submit = async () => {
     if (!number.trim()) {
@@ -98,24 +47,11 @@ export const NumberAnalyzer = ({ compact = false }: { compact?: boolean }) => {
   return (
     <div className="space-y-6">
       <Card>
-        <div className="grid gap-3 md:grid-cols-[1fr_160px_auto]">
-          <Input
-            value={number}
-            placeholder="Enter number (e.g. +213 794 972 433)"
-            onChange={(event) => handleInputChange(event.target.value)}
-          />
-          <select
-            className="h-11 rounded-xl border border-white/20 bg-white/5 px-3 text-sm"
-            value={country}
-            onChange={(event) => handleCountryChange(event.target.value)}
-          >
-            {countryOptions.map((entry) => (
-              <option key={entry.iso} value={entry.iso}>
-                {entry.iso} (+{entry.dialCode})
-              </option>
-            ))}
-          </select>
-          <Button onClick={submit} disabled={loading}>{loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : 'Analyze Call Intent'}</Button>
+        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+          <PhoneInput value={number} countryIso={country} onValueChange={setNumber} onCountryChange={setCountry} />
+          <Button className="h-11 w-full md:w-auto" onClick={submit} disabled={loading}>
+            {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : 'Analyze Call Intent'}
+          </Button>
         </div>
         {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
       </Card>
