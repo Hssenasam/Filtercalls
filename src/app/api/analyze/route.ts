@@ -46,10 +46,10 @@ export async function POST(request: NextRequest) {
     const provider = getPhoneProvider();
     const result = await provider.analyze(number, country);
 
-    await persistAnalysis(requestId, { number, country, apiKeyId: apiKeyRecord?.id }, result);
+    await persistAnalysis(requestId, { number, country, apiKeyId: apiKeyRecord?.id, userId: apiKeyRecord?.user_id ?? null }, result);
 
     if (apiKeyRecord) {
-      void dispatchWebhooks({ request, apiKeyId: apiKeyRecord.id, analysisId: requestId, riskScore: result.risk_score, payload: result });
+      void dispatchWebhooks({ request, apiKeyId: apiKeyRecord.id, userId: apiKeyRecord.user_id ?? null, analysisId: requestId, riskScore: result.risk_score, payload: result });
     }
 
     return withResponseHeaders(NextResponse.json(result), requestId);

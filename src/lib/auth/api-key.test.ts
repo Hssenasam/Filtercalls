@@ -18,7 +18,7 @@ const createDb = () => {
           },
           async run() {
             if (query.startsWith('INSERT INTO api_keys')) {
-              keys.push({ id: values[0], name: values[1], key_hash: values[2], created_at: values[3], rate_limit_per_min: values[4], revoked_at: null, last_used_at: null });
+              keys.push({ id: values[0], name: values[1], key_hash: values[2], created_at: values[3], rate_limit_per_min: values[4], user_id: values[5], revoked_at: null, last_used_at: null });
             }
             if (query.startsWith('UPDATE api_keys SET last_used_at')) {
               const key = keys.find((k) => k.id === values[1]);

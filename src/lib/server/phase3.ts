@@ -35,7 +35,7 @@ export const enforceRateLimit = async (request: NextRequest, apiKeyId: string, r
 
 export const persistAnalysis = async (
   requestId: string,
-  payload: { number: string; country?: string; apiKeyId?: string | null },
+  payload: { number: string; country?: string; apiKeyId?: string | null; userId?: string | null },
   analysis: CallIntentAnalysis
 ) => {
   const db = getD1();
@@ -44,7 +44,7 @@ export const persistAnalysis = async (
   return safeRun(async () => {
     await db
       .prepare(
-        'INSERT INTO analyses (id, created_at, e164, country, risk_score, risk_level, engine_version, cache_status, layers_json, api_key_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO analyses (id, created_at, e164, country, risk_score, risk_level, engine_version, cache_status, layers_json, api_key_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
       )
       .bind(
         requestId,
@@ -56,7 +56,8 @@ export const persistAnalysis = async (
         'engine-v2',
         'miss',
         JSON.stringify(analysis.signals),
-        payload.apiKeyId ?? null
+        payload.apiKeyId ?? null,
+        payload.userId ?? null
       )
       .run();
   });
@@ -65,6 +66,7 @@ export const persistAnalysis = async (
 export const dispatchWebhooks = async (args: {
   request: NextRequest;
   apiKeyId: string;
+  userId?: string | null;
   analysisId: string;
   riskScore: number;
   payload: unknown;
@@ -73,6 +75,7 @@ export const dispatchWebhooks = async (args: {
   await dispatchAnalysisWebhooks({
     db,
     apiKeyId: args.apiKeyId,
+    userId: args.userId ?? null,
     analysisId: args.analysisId,
     riskScore: args.riskScore,
     payload: args.payload,

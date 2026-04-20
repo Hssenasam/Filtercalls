@@ -57,8 +57,8 @@ export async function POST(request: NextRequest) {
 
       const result = await provider.analyze(item.number, item.country);
       const analysisId = crypto.randomUUID();
-      await persistAnalysis(analysisId, { number: item.number, country: item.country, apiKeyId: apiKeyRecord.id }, result);
-      void dispatchWebhooks({ request, apiKeyId: apiKeyRecord.id, analysisId, riskScore: result.risk_score, payload: result });
+      await persistAnalysis(analysisId, { number: item.number, country: item.country, apiKeyId: apiKeyRecord.id, userId: apiKeyRecord.user_id ?? null }, result);
+      void dispatchWebhooks({ request, apiKeyId: apiKeyRecord.id, userId: apiKeyRecord.user_id ?? null, analysisId, riskScore: result.risk_score, payload: result });
       results.push({ id: item.id, result });
     }
 

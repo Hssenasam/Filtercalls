@@ -103,3 +103,21 @@ Use Next.js on Cloudflare Pages Functions.
 5. Add environment variables in Pages settings.
 
 For production, pair with Cloudflare-compatible Next adapter (OpenNext for Cloudflare) and keep route handlers in edge runtime for low latency.
+
+
+## Portal (Phase 4)
+
+Public self-serve portal routes:
+- `/signup`, `/login`, `/forgot-password`, `/reset-password`
+- `/portal/overview`, `/portal/keys`, `/portal/webhooks`, `/portal/usage`, `/portal/settings`, `/portal/docs`
+
+Environment variables:
+- `SESSION_SECRET` (required, 32+ random bytes base64)
+- `CSRF_SECRET` (required, 32+ random bytes base64)
+- `RESEND_API_KEY` (optional)
+- `PORTAL_BASE_URL` (required for reset/verify links)
+
+Screenshots placeholders:
+- `Docs/screenshots/portal-signup.png`
+- `Docs/screenshots/portal-overview.png`
+- `Docs/screenshots/portal-keys-modal.png`
