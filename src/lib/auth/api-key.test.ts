@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { authenticateApiKey, createApiKeyRecord, sha256 } from './api-key.ts';
+import { authenticateApiKey, createApiKeyRecord, isAdminAuthorized, sha256 } from './api-key.ts';
 import type { D1DatabaseLike } from '../db/d1.ts';
 
 const createDb = () => {
@@ -57,4 +57,36 @@ test('listing data does not need full key to authenticate', async () => {
   assert.ok(keys[0].key_hash);
   assert.equal(keys[0].key_hash, await sha256(created.key));
   assert.equal((keys[0] as { key?: string }).key, undefined);
+});
+
+test('admin authorization accepts runtime Cloudflare-style global binding', async () => {
+  const globalRef = globalThis as unknown as { ADMIN_TOKEN?: string };
+  const previous = globalRef.ADMIN_TOKEN;
+  delete process.env.ADMIN_TOKEN;
+  globalRef.ADMIN_TOKEN = 'edge-secret-token';
+
+  assert.equal(await isAdminAuthorized('edge-secret-token'), true);
+  assert.equal(await isAdminAuthorized('edge-secret-token '), true);
+  assert.equal(await isAdminAuthorized('wrong-token'), false);
+
+  if (previous === undefined) delete globalRef.ADMIN_TOKEN;
+  else globalRef.ADMIN_TOKEN = previous;
+});
+
+test('admin authorization falls back to process.env.ADMIN_TOKEN', async () => {
+  const globalRef = globalThis as unknown as { ADMIN_TOKEN?: string };
+  const previousGlobal = globalRef.ADMIN_TOKEN;
+  const previousEnv = process.env.ADMIN_TOKEN;
+
+  delete globalRef.ADMIN_TOKEN;
+  process.env.ADMIN_TOKEN = 'env-secret-token';
+
+  assert.equal(await isAdminAuthorized('env-secret-token'), true);
+  assert.equal(await isAdminAuthorized('env-secret-token '), true);
+  assert.equal(await isAdminAuthorized(null), false);
+
+  if (previousGlobal === undefined) delete globalRef.ADMIN_TOKEN;
+  else globalRef.ADMIN_TOKEN = previousGlobal;
+  if (previousEnv === undefined) delete process.env.ADMIN_TOKEN;
+  else process.env.ADMIN_TOKEN = previousEnv;
 });

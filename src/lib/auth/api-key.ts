@@ -33,9 +33,23 @@ export const secureEquals = async (a: string, b: string) => {
 };
 
 export const isAdminAuthorized = async (provided: string | null) => {
-  const expected = process.env.ADMIN_TOKEN;
-  if (!expected || !provided) return false;
-  return secureEquals(expected, provided);
+  const globalRef = globalThis as unknown as {
+    ADMIN_TOKEN?: unknown;
+    ENV?: { ADMIN_TOKEN?: unknown };
+    __env__?: { ADMIN_TOKEN?: unknown };
+  };
+
+  const expectedRaw =
+    (typeof globalRef.ADMIN_TOKEN === 'string' && globalRef.ADMIN_TOKEN) ||
+    (typeof globalRef.ENV?.ADMIN_TOKEN === 'string' && globalRef.ENV.ADMIN_TOKEN) ||
+    (typeof globalRef.__env__?.ADMIN_TOKEN === 'string' && globalRef.__env__.ADMIN_TOKEN) ||
+    process.env.ADMIN_TOKEN;
+
+  const expected = expectedRaw?.trim();
+  const candidate = provided?.trim();
+
+  if (!expected || !candidate) return false;
+  return secureEquals(expected, candidate);
 };
 
 export const createApiKeyRecord = async (db: D1DatabaseLike, input: { name?: string; rateLimitPerMin?: number }) => {
