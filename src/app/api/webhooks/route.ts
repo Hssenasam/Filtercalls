@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateApiKey } from '@/lib/auth/api-key';
-import { getD1 } from '@/lib/db/d1';
-import { errorResponse, optionsResponse, resolveRequestId, withResponseHeaders } from '@/lib/server/phase3';
+import { errorResponse, getDb, optionsResponse, resolveRequestId, withResponseHeaders } from '@/lib/server/phase3';
 
 export const runtime = 'edge';
 
 export const OPTIONS = async (request: NextRequest) => optionsResponse(resolveRequestId(request));
 
 const requireApiKey = async (request: NextRequest, requestId: string) => {
-  const db = getD1();
+  const db = getDb();
   if (!db) return { error: errorResponse(requestId, 'DB_UNAVAILABLE', 'D1 is not configured', 503) };
 
   const key = request.headers.get('x-api-key');

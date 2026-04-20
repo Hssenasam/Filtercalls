@@ -26,8 +26,13 @@ export async function POST(request: NextRequest) {
       return errorResponse(requestId, 'INVALID_NUMBER', 'Invalid number supplied', 400);
     }
 
+    const db = getDb();
     const apiKey = request.headers.get('x-api-key');
-    const apiKeyRecord = await authenticateApiKey(getDb(), apiKey);
+    if (apiKey && !db) {
+      return errorResponse(requestId, 'DB_UNAVAILABLE', 'D1 is not configured', 503);
+    }
+
+    const apiKeyRecord = await authenticateApiKey(db, apiKey);
 
     if (apiKey && !apiKeyRecord) {
       return errorResponse(requestId, 'UNAUTHORIZED', 'Invalid API key', 401);

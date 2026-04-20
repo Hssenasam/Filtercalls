@@ -32,6 +32,10 @@ export async function POST(request: NextRequest) {
     }
 
     const db = getDb();
+    if (!db) {
+      return errorResponse(requestId, 'DB_UNAVAILABLE', 'D1 is not configured', 503);
+    }
+
     const apiKey = request.headers.get('x-api-key');
     const apiKeyRecord = await authenticateApiKey(db, apiKey);
 
