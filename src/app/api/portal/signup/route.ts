@@ -21,12 +21,26 @@ export async function POST(request: NextRequest) {
   const policyError = validatePasswordPolicy(password);
   if (policyError) return NextResponse.json({ error: { code: 'WEAK_PASSWORD', message: policyError } }, { status: 400 });
 
-  const exists = await db.prepare('SELECT id FROM users WHERE email = ? LIMIT 1').bind(email).first<{ id: string }>();
+  let exists: { id: string } | null = null;
+  try {
+    exists = await db.prepare('SELECT id FROM users WHERE email = ? LIMIT 1').bind(email).first<{ id: string }>();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes('no such table: users')) throw error;
+    await db.prepare('CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, email_verified_at INTEGER, created_at INTEGER NOT NULL, updated_at INTEGER, disabled_at INTEGER)').bind().run();
+  }
   if (exists) return NextResponse.json({ error: { code: 'EMAIL_IN_USE', message: 'Email already registered' } }, { status: 409 });
 
   const userId = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);
-  await db.prepare('INSERT INTO users (id, email, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').bind(userId, email, await hashPassword(password), now, now).run();
+  const passwordHash = await hashPassword(password);
+  try {
+    await db.prepare('INSERT INTO users (id, email, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').bind(userId, email, passwordHash, now, now).run();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes('updated_at')) throw error;
+    await db.prepare('INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)').bind(userId, email, passwordHash, now).run();
+  }
 
   const ip = request.headers.get('cf-connecting-ip') ?? request.headers.get('x-forwarded-for') ?? 'unknown';
   const userAgent = request.headers.get('user-agent');

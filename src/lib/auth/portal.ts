@@ -99,7 +99,15 @@ export const createSession = async (db: D1DatabaseLike, userId: string, ip: stri
   const id = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);
   const exp = now + SESSION_TTL_SECONDS;
-  await db.prepare('INSERT INTO sessions (id, user_id, created_at, expires_at, last_seen_at, user_agent, ip) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(id, userId, now, exp, now, userAgent, ip).run();
+  try {
+    await db.prepare('INSERT INTO sessions (id, user_id, created_at, expires_at, last_seen_at, user_agent, ip) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(id, userId, now, exp, now, userAgent, ip).run();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes('no such table: sessions')) throw error;
+    await db.prepare('CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL, user_agent TEXT, ip TEXT)').bind().run();
+    await db.prepare('CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)').bind().run();
+    await db.prepare('INSERT INTO sessions (id, user_id, created_at, expires_at, last_seen_at, user_agent, ip) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(id, userId, now, exp, now, userAgent, ip).run();
+  }
   const jwt = await signSessionJwt({ sid: id, uid: userId, exp });
   return { id, jwt, exp };
 };
