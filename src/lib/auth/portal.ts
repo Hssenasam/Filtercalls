@@ -1,5 +1,5 @@
 import { cookies, headers } from 'next/headers';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server.js';
 import type { D1DatabaseLike } from '@/lib/db/d1';
 import { sha256, secureEquals } from './api-key';
 export { hashPassword, validatePasswordPolicy, verifyPassword } from './password';

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server.js';
 import { getD1 } from '@/lib/db/d1';
 import { enforceWindowRateLimit } from '@/lib/auth/portal-rate-limit';
 import { findUserByEmail, getPortalBaseUrl, hashToken, maskEmail } from '@/lib/auth/portal';

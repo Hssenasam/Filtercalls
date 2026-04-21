@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server.js';
 import { clearSessionCookies, parseSessionJwt } from '@/lib/auth/portal';
 import { getD1 } from '@/lib/db/d1';
 

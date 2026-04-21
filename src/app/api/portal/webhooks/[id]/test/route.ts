@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server.js';
 import { getD1 } from '@/lib/db/d1';
 import { getSessionUser, requireCsrf } from '@/lib/auth/portal';
 import { signWebhookPayload } from '@/lib/webhooks/dispatch';

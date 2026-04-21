@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server.js';
 import { createApiKeyRecord } from '@/lib/auth/api-key';
 import { getD1 } from '@/lib/db/d1';
 import { getSessionUser, requireCsrf } from '@/lib/auth/portal';

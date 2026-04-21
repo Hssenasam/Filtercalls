@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server.js';
 import { isAdminAuthorized } from '@/lib/auth/api-key';
 import { errorResponse, getDb, optionsResponse, resolveRequestId, withResponseHeaders } from '@/lib/server/phase3';
 

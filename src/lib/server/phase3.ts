@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server.js';
 import type { CallIntentAnalysis } from '@/lib/engine/types';
 import { authenticateApiKey as authKey } from '@/lib/auth/api-key';
 import { getD1, safeRun } from '@/lib/db/d1';

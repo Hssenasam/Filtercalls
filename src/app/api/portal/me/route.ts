@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server.js';
 import { getD1 } from '@/lib/db/d1';
 import { findUserByEmail, getSessionUser, hashPassword, requireCsrf, validatePasswordPolicy, verifyPassword } from '@/lib/auth/portal';
 
