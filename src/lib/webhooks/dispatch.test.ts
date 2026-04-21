@@ -8,8 +8,13 @@ test('webhook signature has stable format', async () => {
   assert.match(sig, /^sha256=[a-f0-9]{64}$/);
 });
 
-test('disabled webhook is skipped and retries happen', async () => {
+test('disabled webhook is skipped and retries happen', async (t) => {
   let attempts = 0;
+  const originalFetch = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
   globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
     attempts += 1;
     if (attempts < 3) return new Response('bad', { status: 500 });
