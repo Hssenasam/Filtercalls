@@ -63,6 +63,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown';
     console.error(`signup failure at step=${step}: ${message}`);
-    return NextResponse.json({ error: { code: 'SIGNUP_FAILED', message: `Signup failed at ${step}` } }, { status: 500 });
+    return NextResponse.json({ error: { code: 'SIGNUP_FAILED', message: `Signup failed at ${step}`, detail: message.slice(0, 200) } }, { status: 500 });
   }
 }
