@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server.js';
 import { getD1 } from '@/lib/db/d1';
-import { createSession, findUserByEmail, genericAuthError, getRequestMeta, setSessionCookies, verifyPassword } from '@/lib/auth/portal';
+import { createSession, findUserByEmail, genericAuthError, setSessionCookies, verifyPassword } from '@/lib/auth/portal';
 import { enforceWindowRateLimit } from '@/lib/auth/portal-rate-limit';
 
 export const runtime = 'edge';
@@ -19,8 +19,9 @@ export async function POST(request: NextRequest) {
 
   if (!ok) return NextResponse.json(genericAuthError, { status: 401 });
 
-  const meta = await getRequestMeta();
-  const session = await createSession(db, user.id, meta.ip, meta.userAgent);
+  const ipAddress = request.headers.get('cf-connecting-ip') ?? request.headers.get('x-forwarded-for') ?? 'unknown';
+  const userAgent = request.headers.get('user-agent');
+  const session = await createSession(db, user.id, ipAddress, userAgent);
   const response = NextResponse.json({ id: user.id, email: user.email, email_verified_at: user.email_verified_at }, { status: 200 });
   await setSessionCookies(response, session.jwt, session.exp);
   return response;

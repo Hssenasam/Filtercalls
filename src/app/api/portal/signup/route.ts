@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server.js';
 import { getD1 } from '@/lib/db/d1';
-import { createSession, getRequestMeta, hashPassword, maskEmail, setSessionCookies, validatePasswordPolicy } from '@/lib/auth/portal';
+import { createSession, hashPassword, maskEmail, setSessionCookies, validatePasswordPolicy } from '@/lib/auth/portal';
 import { enforceWindowRateLimit } from '@/lib/auth/portal-rate-limit';
 
 export const runtime = 'edge';
@@ -8,8 +8,8 @@ export const runtime = 'edge';
 export async function POST(request: NextRequest) {
   const db = getD1();
   if (!db) return NextResponse.json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } }, { status: 503 });
-  const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
-  const limit = await enforceWindowRateLimit(`signup:${ip}`, 5, 3600);
+  const clientIp = request.headers.get('cf-connecting-ip') ?? 'unknown';
+  const limit = await enforceWindowRateLimit(`signup:${clientIp}`, 5, 3600);
   if (!limit.ok) return NextResponse.json({ error: { code: 'RATE_LIMITED', message: 'Try again later' } }, { status: 429 });
 
   const body = (await request.json()) as { email?: string; password?: string; confirmPassword?: string };
@@ -28,8 +28,9 @@ export async function POST(request: NextRequest) {
   const now = Math.floor(Date.now() / 1000);
   await db.prepare('INSERT INTO users (id, email, password_hash, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').bind(userId, email, await hashPassword(password), now, now).run();
 
-  const meta = await getRequestMeta();
-  const session = await createSession(db, userId, meta.ip, meta.userAgent);
+  const ip = request.headers.get('cf-connecting-ip') ?? request.headers.get('x-forwarded-for') ?? 'unknown';
+  const userAgent = request.headers.get('user-agent');
+  const session = await createSession(db, userId, ip, userAgent);
 
   console.info(`signup success: ${maskEmail(email)}`);
 
