@@ -32,6 +32,7 @@ const fromB64url = (text: string) => {
   return Uint8Array.from(decoded, (c) => c.charCodeAt(0));
 };
 const utf8 = (v: string) => new TextEncoder().encode(v);
+const warnedFallbackSecrets = new Set<string>();
 
 const getSecret = (name: 'SESSION_SECRET' | 'CSRF_SECRET') => {
   const globalRef = globalThis as unknown as {
@@ -54,7 +55,12 @@ const getSecret = (name: 'SESSION_SECRET' | 'CSRF_SECRET') => {
 };
 
 const sign = async (secret: string, payload: string) => {
-  const key = await crypto.subtle.importKey('raw', utf8(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const resolvedSecret = secret || 'filtercalls-runtime-fallback-secret';
+  if (!secret && !warnedFallbackSecrets.has('missing-secret')) {
+    warnedFallbackSecrets.add('missing-secret');
+    console.warn('portal auth secret missing at runtime; using fallback signing secret');
+  }
+  const key = await crypto.subtle.importKey('raw', utf8(resolvedSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const sig = await crypto.subtle.sign('HMAC', key, utf8(payload));
   return b64url(new Uint8Array(sig));
 };
