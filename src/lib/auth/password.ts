@@ -28,11 +28,12 @@ export const validatePasswordPolicy = (password: string) => {
 
 export const hashPassword = async (password: string) => {
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  const baseKey = await crypto.subtle.importKey('raw', utf8(password), { name: 'PBKDF2' }, false, ['deriveBits', 'deriveKey']);
   try {
+    const baseKey = await crypto.subtle.importKey('raw', utf8(password), { name: 'PBKDF2' }, false, ['deriveBits']);
     const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 210000, hash: 'SHA-256' }, baseKey, 256);
     return `pbkdf2$210000$${b64url(salt)}$${b64url(new Uint8Array(bits))}`;
   } catch {
+    const baseKey = await crypto.subtle.importKey('raw', utf8(password), { name: 'PBKDF2' }, false, ['deriveKey']);
     const derived = await crypto.subtle.deriveKey(
       { name: 'PBKDF2', salt, iterations: 210000, hash: 'SHA-256' },
       baseKey,
@@ -51,11 +52,12 @@ export const verifyPassword = async (password: string, passwordHash: string) => 
   const iterations = Number(iterationsRaw);
   if (!iterations || !saltRaw || !hashRaw) return false;
 
-  const baseKey = await crypto.subtle.importKey('raw', utf8(password), { name: 'PBKDF2' }, false, ['deriveBits', 'deriveKey']);
   try {
+    const baseKey = await crypto.subtle.importKey('raw', utf8(password), { name: 'PBKDF2' }, false, ['deriveBits']);
     const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: fromB64url(saltRaw), iterations, hash: 'SHA-256' }, baseKey, 256);
     return secureEquals(b64url(new Uint8Array(bits)), hashRaw);
   } catch {
+    const baseKey = await crypto.subtle.importKey('raw', utf8(password), { name: 'PBKDF2' }, false, ['deriveKey']);
     const derived = await crypto.subtle.deriveKey(
       { name: 'PBKDF2', salt: fromB64url(saltRaw), iterations, hash: 'SHA-256' },
       baseKey,
