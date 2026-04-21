@@ -18,6 +18,20 @@ const fromB64url = (text: string) => {
 };
 
 const utf8 = (v: string) => new TextEncoder().encode(v);
+const concatBytes = (a: Uint8Array, b: Uint8Array) => {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a, 0);
+  out.set(b, a.length);
+  return out;
+};
+
+const iterativeSha256 = async (password: string, salt: Uint8Array, iterations: number) => {
+  let current = concatBytes(utf8(password), salt);
+  for (let i = 0; i < iterations; i += 1) {
+    current = new Uint8Array(await crypto.subtle.digest('SHA-256', current));
+  }
+  return current;
+};
 
 export const validatePasswordPolicy = (password: string) => {
   if (password.length < 10) return 'Password must be at least 10 characters long';
@@ -33,39 +47,30 @@ export const hashPassword = async (password: string) => {
     const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 210000, hash: 'SHA-256' }, baseKey, 256);
     return `pbkdf2$210000$${b64url(salt)}$${b64url(new Uint8Array(bits))}`;
   } catch {
-    const baseKey = await crypto.subtle.importKey('raw', utf8(password), { name: 'PBKDF2' }, false, ['deriveKey']);
-    const derived = await crypto.subtle.deriveKey(
-      { name: 'PBKDF2', salt, iterations: 210000, hash: 'SHA-256' },
-      baseKey,
-      { name: 'HMAC', hash: 'SHA-256', length: 256 },
-      true,
-      ['sign']
-    );
-    const raw = new Uint8Array(await crypto.subtle.exportKey('raw', derived));
-    return `pbkdf2$210000$${b64url(salt)}$${b64url(raw)}`;
+    const iterations = 120000;
+    const raw = await iterativeSha256(password, salt, iterations);
+    return `sha256i$${iterations}$${b64url(salt)}$${b64url(raw)}`;
   }
 };
 
 export const verifyPassword = async (password: string, passwordHash: string) => {
   const [algorithm, iterationsRaw, saltRaw, hashRaw] = passwordHash.split('$');
-  if (algorithm !== 'pbkdf2') return false;
+  if (!['pbkdf2', 'sha256i'].includes(algorithm)) return false;
   const iterations = Number(iterationsRaw);
   if (!iterations || !saltRaw || !hashRaw) return false;
+  const salt = fromB64url(saltRaw);
+
+  if (algorithm === 'sha256i') {
+    const raw = await iterativeSha256(password, salt, iterations);
+    return secureEquals(b64url(raw), hashRaw);
+  }
 
   try {
     const baseKey = await crypto.subtle.importKey('raw', utf8(password), { name: 'PBKDF2' }, false, ['deriveBits']);
-    const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: fromB64url(saltRaw), iterations, hash: 'SHA-256' }, baseKey, 256);
+    const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, baseKey, 256);
     return secureEquals(b64url(new Uint8Array(bits)), hashRaw);
   } catch {
-    const baseKey = await crypto.subtle.importKey('raw', utf8(password), { name: 'PBKDF2' }, false, ['deriveKey']);
-    const derived = await crypto.subtle.deriveKey(
-      { name: 'PBKDF2', salt: fromB64url(saltRaw), iterations, hash: 'SHA-256' },
-      baseKey,
-      { name: 'HMAC', hash: 'SHA-256', length: 256 },
-      true,
-      ['sign']
-    );
-    const raw = new Uint8Array(await crypto.subtle.exportKey('raw', derived));
+    const raw = await iterativeSha256(password, salt, iterations);
     return secureEquals(b64url(raw), hashRaw);
   }
 };
