@@ -3,6 +3,7 @@ const commonPasswords = new Set([
 ]);
 
 import { secureEquals } from './api-key.ts';
+import { sha256 } from 'js-sha256';
 const b64url = (bytes: Uint8Array) => {
   let str = '';
   bytes.forEach((b) => {
@@ -27,10 +28,17 @@ const concatBytes = (a: Uint8Array, b: Uint8Array) => {
 
 const iterativeSha256 = async (password: string, salt: Uint8Array, iterations: number) => {
   let current = concatBytes(utf8(password), salt);
-  for (let i = 0; i < iterations; i += 1) {
-    current = new Uint8Array(await crypto.subtle.digest('SHA-256', current));
+  try {
+    for (let i = 0; i < iterations; i += 1) {
+      current = new Uint8Array(await crypto.subtle.digest('SHA-256', current));
+    }
+    return current;
+  } catch {
+    for (let i = 0; i < iterations; i += 1) {
+      current = Uint8Array.from(sha256.array(current));
+    }
+    return current;
   }
-  return current;
 };
 
 export const validatePasswordPolicy = (password: string) => {
