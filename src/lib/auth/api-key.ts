@@ -8,6 +8,7 @@ export type ApiKeyRow = {
   last_used_at: number | null;
   revoked_at: number | null;
   rate_limit_per_min: number | null;
+  user_id: string | null;
 };
 
 const hex = (data: ArrayBuffer) => Array.from(new Uint8Array(data)).map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -60,7 +61,7 @@ export const createApiKeyRecord = async (db: D1DatabaseLike, input: { name?: str
   const rate = Math.max(1, Math.min(10_000, input.rateLimitPerMin ?? 60));
 
   await db
-    .prepare('INSERT INTO api_keys (id, name, key_hash, created_at, rate_limit_per_min) VALUES (?, ?, ?, ?, ?)')
+    .prepare('INSERT INTO api_keys (id, name, key_hash, created_at, rate_limit_per_min, user_id) VALUES (?, ?, ?, ?, ?, NULL)')
     .bind(id, input.name ?? null, hash, createdAt, rate)
     .run();
 
@@ -80,7 +81,7 @@ export const authenticateApiKey = async (db: D1DatabaseLike | undefined, rawKey:
 
   const hash = await sha256(rawKey);
   const row = await db
-    .prepare('SELECT id, name, key_hash, created_at, last_used_at, revoked_at, rate_limit_per_min FROM api_keys WHERE key_hash = ? LIMIT 1')
+    .prepare('SELECT id, name, key_hash, created_at, last_used_at, revoked_at, rate_limit_per_min, user_id FROM api_keys WHERE key_hash = ? LIMIT 1')
     .bind(hash)
     .first<ApiKeyRow>();
 

@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, email_verified_at INTEGER, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, disabled_at INTEGER);
+CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL, user_agent TEXT, ip TEXT);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+CREATE TABLE IF NOT EXISTS password_resets (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL, used_at INTEGER);
+INSERT OR IGNORE INTO users (id, email, password_hash, email_verified_at, created_at, updated_at) VALUES ('legacy-admin', 'legacy-admin@filtercalls.local', 'disabled', strftime('%s','now'), strftime('%s','now'), strftime('%s','now'));
+ALTER TABLE api_keys ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
+UPDATE api_keys SET user_id = 'legacy-admin' WHERE user_id IS NULL;
+CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id);
+ALTER TABLE webhooks ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
+UPDATE webhooks SET user_id = 'legacy-admin' WHERE user_id IS NULL;
+CREATE INDEX IF NOT EXISTS idx_webhooks_user ON webhooks(user_id);
+ALTER TABLE analyses ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_analyses_user_created ON analyses(user_id, created_at DESC);

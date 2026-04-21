@@ -69,6 +69,7 @@ const deliverWithRetry = async (webhook: WebhookRow, body: string, event: Webhoo
 export const dispatchAnalysisWebhooks = async (args: {
   db?: D1DatabaseLike;
   apiKeyId: string;
+  userId?: string | null;
   analysisId: string;
   riskScore: number;
   payload: unknown;

@@ -6,6 +6,9 @@ pages_build_output_dir = ".vercel/output/static"
 [vars]
 NEXT_TELEMETRY_DISABLED = "1"
 PUBLIC_DEMO = "true"
+SESSION_SECRET = ""
+CSRF_SECRET = ""
+PORTAL_BASE_URL = "https://filtercalls.pages.dev"
 
 [[d1_databases]]
 binding = "DB"

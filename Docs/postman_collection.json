@@ -8,36 +8,151 @@
       "name": "Analyze",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-API-Key", "value": "{{api_key}}" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}"
+          }
+        ],
         "url": "{{base_url}}/api/analyze",
-        "body": { "mode": "raw", "raw": "{\n  \"number\": \"+14155550142\",\n  \"country\": \"US\"\n}" }
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"number\": \"+14155550142\",\n  \"country\": \"US\"\n}"
+        }
       }
     },
     {
       "name": "Batch Analyze",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-API-Key", "value": "{{api_key}}" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}"
+          }
+        ],
         "url": "{{base_url}}/api/analyze/batch",
-        "body": { "mode": "raw", "raw": "{\n  \"items\": [{\"id\":\"1\",\"number\":\"+14155550142\",\"country\":\"US\"}]\n}" }
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"items\": [{\"id\":\"1\",\"number\":\"+14155550142\",\"country\":\"US\"}]\n}"
+        }
       }
     },
     {
       "name": "Admin Create Key",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "X-Admin-Token", "value": "{{admin_token}}" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Admin-Token",
+            "value": "{{admin_token}}"
+          }
+        ],
         "url": "{{base_url}}/api/admin/keys",
-        "body": { "mode": "raw", "raw": "{\"name\":\"integration\",\"rate_limit_per_min\":60}" }
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"integration\",\"rate_limit_per_min\":60}"
+        }
       }
     },
     {
       "name": "Webhooks",
       "request": {
         "method": "GET",
-        "header": [{ "key": "X-API-Key", "value": "{{api_key}}" }],
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{api_key}}"
+          }
+        ],
         "url": "{{base_url}}/api/webhooks"
       }
+    },
+    {
+      "name": "Portal",
+      "item": [
+        {
+          "name": "Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/portal/signup",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@test.dev\",\n  \"password\": \"CorrectHorse9!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/portal/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@test.dev\",\n  \"password\": \"CorrectHorse9!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/portal/me"
+          }
+        },
+        {
+          "name": "List Keys",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/portal/keys"
+          }
+        },
+        {
+          "name": "Create Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-csrf-token",
+                "value": "{{csrf_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/portal/keys",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"prod\"}"
+            }
+          }
+        }
+      ]
     }
   ]
 }
