@@ -109,13 +109,16 @@ For production, pair with Cloudflare-compatible Next adapter (OpenNext for Cloud
 
 Public self-serve portal routes:
 - `/signup`, `/login`, `/forgot-password`, `/reset-password`
-- `/portal/overview`, `/portal/keys`, `/portal/webhooks`, `/portal/usage`, `/portal/settings`, `/portal/docs`
+- `/portal/overview`, `/portal/keys`, `/portal/webhooks`, `/portal/usage`, `/portal/billing`, `/portal/settings`, `/portal/docs`
 
 Environment variables:
 - `SESSION_SECRET` (required, 32+ random bytes base64)
 - `CSRF_SECRET` (required, 32+ random bytes base64)
 - `RESEND_API_KEY` (optional)
 - `PORTAL_BASE_URL` (required for reset/verify links)
+- `STRIPE_SECRET_KEY` (required for paid plan checkout/portal)
+- `STRIPE_WEBHOOK_SECRET` (required for `/api/stripe/webhook`)
+- `STRIPE_PRICE_PRO_MONTHLY` (required Stripe price ID for Pro plan)
 
 Screenshots placeholders:
 - `Docs/screenshots/portal-signup.png`

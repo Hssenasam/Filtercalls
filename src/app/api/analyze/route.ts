@@ -11,6 +11,7 @@ import {
   resolveRequestId,
   withResponseHeaders
 } from '@/lib/server/phase3';
+import { assertLimit } from '@/lib/billing/state';
 
 export const runtime = 'edge';
 
@@ -39,6 +40,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (apiKeyRecord) {
+      if (apiKeyRecord.user_id) {
+        const planCheck = await assertLimit(db!, apiKeyRecord.user_id, { type: 'analyses', amount: 1 });
+        if (!planCheck.ok) {
+          return errorResponse(requestId, 'PLAN_LIMIT_EXCEEDED', `Monthly analysis limit reached (${planCheck.limit}) for current plan`, 402);
+        }
+      }
       const limitResult = await enforceRateLimit(request, apiKeyRecord.id, apiKeyRecord.rate_limit_per_min ?? 60, 1);
       if (!limitResult.ok) return withResponseHeaders(limitResult.response, requestId);
     }

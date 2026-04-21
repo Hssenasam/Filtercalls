@@ -12,6 +12,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             <Link href="/portal/keys">API Keys</Link>
             <Link href="/portal/webhooks">Webhooks</Link>
             <Link href="/portal/usage">Usage</Link>
+            <Link href="/portal/billing">Billing</Link>
             <Link href="/portal/settings">Settings</Link>
           </nav>
         </div>

@@ -3,6 +3,7 @@ import { createApiKeyRecord } from '@/lib/auth/api-key';
 import { getD1 } from '@/lib/db/d1';
 import { getSessionUser, requireCsrf } from '@/lib/auth/portal';
 import { enforceWindowRateLimit } from '@/lib/auth/portal-rate-limit';
+import { assertLimit } from '@/lib/billing/state';
 
 export const runtime = 'edge';
 
@@ -31,6 +32,13 @@ export async function POST(request: NextRequest) {
   if (!limit.ok) return NextResponse.json({ error: { code: 'RATE_LIMITED', message: 'Try again later' } }, { status: 429 });
 
   const body = (await request.json()) as { name?: string; rate_limit_per_min?: number };
+  const limitCheck = await assertLimit(db, user.id, { type: 'api_keys' });
+  if (!limitCheck.ok) {
+    return NextResponse.json(
+      { error: { code: 'PLAN_LIMIT_EXCEEDED', message: `Your ${limitCheck.plan.label} plan allows up to ${limitCheck.limit} API keys. Upgrade to increase this limit.` } },
+      { status: 402 }
+    );
+  }
   const created = await createApiKeyRecord(db, { name: body.name, rateLimitPerMin: body.rate_limit_per_min });
   await db.prepare('UPDATE api_keys SET user_id = ? WHERE id = ?').bind(user.id, created.id).run();
   return NextResponse.json(created, { status: 201 });

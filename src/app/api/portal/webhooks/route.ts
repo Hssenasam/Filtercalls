@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server.js';
 import { getD1 } from '@/lib/db/d1';
 import { getSessionUser, requireCsrf } from '@/lib/auth/portal';
+import { assertLimit } from '@/lib/billing/state';
 
 export const runtime = 'edge';
 
@@ -23,6 +24,13 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json()) as { url?: string; secret?: string; event_types?: string[] };
   if (!body.url) return NextResponse.json({ error: { code: 'INVALID_INPUT', message: 'url is required' } }, { status: 400 });
+  const limitCheck = await assertLimit(db, user.id, { type: 'webhooks' });
+  if (!limitCheck.ok) {
+    return NextResponse.json(
+      { error: { code: 'PLAN_LIMIT_EXCEEDED', message: `Your ${limitCheck.plan.label} plan allows up to ${limitCheck.limit} active webhooks. Upgrade to increase this limit.` } },
+      { status: 402 }
+    );
+  }
   const id = crypto.randomUUID();
   const now = Date.now();
   await db.prepare('INSERT INTO webhooks (id, api_key_id, url, secret, event_types, created_at, user_id) VALUES (?, NULL, ?, ?, ?, ?, ?)').bind(id, body.url, body.secret ?? null, body.event_types?.join(',') ?? 'analysis.completed,analysis.high_risk', now, user.id).run();

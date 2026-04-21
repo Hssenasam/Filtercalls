@@ -63,6 +63,10 @@ export async function GET() {
       '/api/portal/webhooks': { get: { security: [{ cookieAuth: [] }], responses: { '200': { description: 'List' } } }, post: { security: [{ cookieAuth: [] }], responses: { '201': { description: 'Created' } } } },
       '/api/portal/usage': { get: { security: [{ cookieAuth: [] }], responses: { '200': { description: 'User 30-day usage' } } } },
       '/api/portal/dashboard': { get: { security: [{ cookieAuth: [] }], responses: { '200': { description: 'User dashboard metrics' } } } },
+      '/api/portal/billing': { get: { security: [{ cookieAuth: [] }], responses: { '200': { description: 'Current billing state and limits' } } } },
+      '/api/portal/billing/checkout': { post: { security: [{ cookieAuth: [] }], responses: { '200': { description: 'Stripe checkout URL' }, '402': { description: 'Plan limit reached' } } } },
+      '/api/portal/billing/portal': { post: { security: [{ cookieAuth: [] }], responses: { '200': { description: 'Stripe billing portal URL' } } } },
+      '/api/stripe/webhook': { post: { responses: { '200': { description: 'Stripe webhook accepted' }, '400': { description: 'Invalid signature' } } } },
       '/api/webhooks': {
         get: { security: [{ ApiKeyAuth: [] }], responses: { '200': { description: 'List webhooks' }, '401': { description: 'Unauthorized' } } },
         post: { security: [{ ApiKeyAuth: [] }], responses: { '200': { description: 'Create webhook' }, '401': { description: 'Unauthorized' } } },
