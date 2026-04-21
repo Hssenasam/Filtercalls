@@ -34,8 +34,23 @@ const fromB64url = (text: string) => {
 const utf8 = (v: string) => new TextEncoder().encode(v);
 
 const getSecret = (name: 'SESSION_SECRET' | 'CSRF_SECRET') => {
-  const globalRef = globalThis as unknown as { env?: Record<string, string>; ENV?: Record<string, string> };
-  return process.env[name] ?? globalRef.env?.[name] ?? globalRef.ENV?.[name] ?? '';
+  const globalRef = globalThis as unknown as {
+    env?: Record<string, string>;
+    ENV?: Record<string, string>;
+    __env__?: Record<string, string>;
+    __ENV__?: Record<string, string>;
+    SESSION_SECRET?: string;
+    CSRF_SECRET?: string;
+  };
+  return (
+    process.env[name] ??
+    globalRef[name] ??
+    globalRef.env?.[name] ??
+    globalRef.ENV?.[name] ??
+    globalRef.__env__?.[name] ??
+    globalRef.__ENV__?.[name] ??
+    ''
+  );
 };
 
 const sign = async (secret: string, payload: string) => {
