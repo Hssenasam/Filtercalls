@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowRight, Shield, Zap, Code2, LoaderCircle } from 'lucide-react';
-import { NumberAnalyzer } from '@/components/analysis/number-analyzer';
 
 // ── Suggestion chips ──────────────────────────────────────────────────────────
 const CHIPS = [
