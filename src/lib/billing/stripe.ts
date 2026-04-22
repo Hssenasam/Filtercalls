@@ -44,6 +44,7 @@ export const createStripeCustomer = async (email: string, userId: string) => {
 export const createCheckoutSession = async (input: { customerId: string; userId: string }) => {
   const { proPriceId, appUrl } = stripeConfig();
   if (!proPriceId) throw new Error('STRIPE_PRICE_NOT_CONFIGURED');
+
   const body = new URLSearchParams();
   body.set('mode', 'subscription');
   body.set('customer', input.customerId);
@@ -51,7 +52,9 @@ export const createCheckoutSession = async (input: { customerId: string; userId:
   body.set('line_items[0][quantity]', '1');
   body.set('success_url', `${appUrl}/portal/billing?checkout=success`);
   body.set('cancel_url', `${appUrl}/portal/billing?checkout=cancel`);
+  body.set('payment_method_types[]', 'card');
   body.set('metadata[user_id]', input.userId);
+
   const session = await stripeFetch('checkout/sessions', body);
   return String(session.url);
 };
