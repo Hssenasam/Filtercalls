@@ -7,6 +7,11 @@ pages_build_output_dir = ".vercel/output/static"
 NEXT_TELEMETRY_DISABLED = "1"
 PUBLIC_DEMO = "true"
 PORTAL_BASE_URL = "https://filtercalls.com"
+# NOTE: Do NOT put real Stripe keys here.
+# Add them as encrypted secrets via:
+#   wrangler secret put STRIPE_SECRET_KEY
+#   wrangler secret put STRIPE_PRICE_PRO_MONTHLY
+#   wrangler secret put STRIPE_WEBHOOK_SECRET
 
 [[d1_databases]]
 binding = "DB"
