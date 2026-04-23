@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import type { Route } from 'next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Zap } from 'lucide-react';
 
-const NAV_LINKS = [
+const NAV_LINKS: { label: string; href: string }[] = [
   { label: 'Features', href: '/#features' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Solutions', href: '/solutions' },
@@ -50,26 +51,26 @@ export function SiteHeader() {
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map((link) => (
-              <Link
+              <a
                 key={link.href}
                 href={link.href}
                 className="px-3.5 py-2 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/[0.06] transition-all duration-150"
               >
                 {link.label}
-              </Link>
+              </a>
             ))}
           </nav>
 
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-2">
             <Link
-              href="/portal/login"
+              href={'/portal/login' as Route}
               className="px-4 py-2 text-sm text-white/70 hover:text-white rounded-lg hover:bg-white/[0.06] transition-all duration-150"
             >
               Sign in
             </Link>
             <Link
-              href="/analysis"
+              href={'/analysis' as Route}
               className="px-4 py-2 text-sm font-medium text-white rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-lg shadow-violet-500/20 hover:shadow-violet-500/30 transition-all duration-200 active:scale-[0.97]"
             >
               Analyze now
@@ -120,27 +121,27 @@ export function SiteHeader() {
 
               <nav className="flex flex-col gap-1 p-4 flex-1">
                 {NAV_LINKS.map((link) => (
-                  <Link
+                  <a
                     key={link.href}
                     href={link.href}
                     onClick={() => setDrawerOpen(false)}
                     className="px-4 py-3 text-sm text-white/70 hover:text-white rounded-xl hover:bg-white/[0.06] transition-all"
                   >
                     {link.label}
-                  </Link>
+                  </a>
                 ))}
               </nav>
 
               <div className="flex flex-col gap-3 p-4 border-t border-white/[0.06]">
                 <Link
-                  href="/portal/login"
+                  href={'/portal/login' as Route}
                   onClick={() => setDrawerOpen(false)}
                   className="w-full px-4 py-3 text-sm text-center text-white/70 hover:text-white rounded-xl border border-white/[0.08] hover:bg-white/[0.06] transition-all"
                 >
                   Sign in
                 </Link>
                 <Link
-                  href="/analysis"
+                  href={'/analysis' as Route}
                   onClick={() => setDrawerOpen(false)}
                   className="w-full px-4 py-3 text-sm font-medium text-center text-white rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-lg shadow-violet-500/20 transition-all active:scale-[0.97]"
                 >
