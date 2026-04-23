@@ -1,4 +1,4 @@
-import { boundedJitter, fnv1a32 } from '@/lib/hash';
+import { fnv1a32 } from '@/lib/hash';
 import { COUNTRIES, COUNTRY_BY_ISO, DIAL_TO_COUNTRY, SORTED_DIAL_CODES } from '@/lib/countries';
 import { CallIntentAnalysis, CallSignal, IntentCategory, RecommendedAction } from '@/lib/engine/types';
 
