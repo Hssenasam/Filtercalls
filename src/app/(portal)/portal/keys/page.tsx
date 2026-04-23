@@ -93,50 +93,42 @@ export default function PortalKeysPage() {
     }
   };
 
-  if (loading) return <p>Loading keys…</p>;
+  if (loading) return <section className="space-y-4"><div className="h-8 w-40 animate-pulse rounded bg-white/10" /><div className="grid gap-4"><div className="h-40 animate-pulse rounded-[2rem] bg-white/[0.04]" /><div className="h-24 animate-pulse rounded-[2rem] bg-white/[0.04]" /></div></section>;
   if (error) return <p>{error}</p>;
 
   return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">API Keys</h1>
-      <div className="rounded border border-white/10 p-3 space-y-2">
+    <section className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold">API Keys</h1>
+        <p className="mt-2 text-sm text-slate-300">Generate secure credentials for your apps and revoke them when they are no longer needed.</p>
+      </div>
+      <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-5 space-y-3">
         <label className="block text-sm">
           Key name
-          <input
-            value={newName}
-            onChange={(event) => setNewName(event.target.value)}
-            className="mt-1 w-full rounded bg-slate-900 border border-white/10 px-2 py-1"
-            placeholder="production"
-          />
+          <input value={newName} onChange={(event) => setNewName(event.target.value)} className="mt-2 w-full rounded-2xl bg-slate-900 border border-white/10 px-3 py-3" placeholder="production" />
         </label>
-        <button type="button" onClick={createKey} disabled={creating} className="rounded bg-white text-slate-900 px-3 py-1 text-sm disabled:opacity-60">
+        <button type="button" onClick={createKey} disabled={creating} className="rounded-2xl bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60">
           {creating ? 'Creating…' : 'Create key'}
         </button>
-        {rawKey ? (
-          <div className="rounded bg-emerald-900/30 border border-emerald-500/40 p-2 text-sm">
-            <p className="font-medium">Copy this key now (shown once):</p>
-            <code className="break-all">{rawKey}</code>
-          </div>
-        ) : null}
+        {rawKey ? <div className="rounded-2xl bg-emerald-900/30 border border-emerald-500/40 p-3 text-sm"><p className="font-medium">Copy this key now (shown once):</p><code className="break-all">{rawKey}</code></div> : null}
         {success ? <p className="text-emerald-300 text-sm">{success}</p> : null}
       </div>
 
       {!data.length ? (
-        <p>No API keys yet.</p>
+        <div className="rounded-[2rem] border border-dashed border-white/10 bg-white/[0.02] p-8 text-center">
+          <p className="text-xl font-medium text-white">No API keys yet</p>
+          <p className="mt-2 text-sm text-slate-400">Create your first key to start analyzing phone numbers securely from your own app or workflow.</p>
+        </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {data.map((row) => (
-            <li key={row.id} className="rounded border border-white/10 p-3 flex items-center justify-between gap-3">
+            <li key={row.id} className="rounded-[1.5rem] border border-white/10 p-4 flex items-center justify-between gap-3 bg-white/[0.03]">
               <div>
                 <p className="font-medium">{row.name ?? 'Unnamed key'}</p>
                 <p className="text-xs text-slate-400">Created {new Date(row.created_at).toLocaleString()}</p>
                 {row.revoked_at ? <p className="text-xs text-rose-300">Revoked</p> : null}
               </div>
-              {!row.revoked_at ? (
-                <button type="button" onClick={() => revokeKey(row.id)} className="rounded border border-rose-500/40 text-rose-300 px-2 py-1 text-xs">
-                  Revoke
-                </button>
-              ) : null}
+              {!row.revoked_at ? <button type="button" onClick={() => revokeKey(row.id)} className="rounded-2xl border border-rose-500/40 text-rose-300 px-3 py-2 text-xs">Revoke</button> : null}
             </li>
           ))}
         </ul>
