@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
       {
         error: {
           code: 'EMAIL_NOT_VERIFIED',
-          message: 'Please verify your email before logging in.'
+          message: 'Please verify your email before logging in.',
+          email: user.email
         }
       },
       { status: 403 }
