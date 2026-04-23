@@ -10,8 +10,6 @@ export async function GET(request: NextRequest) {
   }
 
   const redirectTo = request.nextUrl.searchParams.get('redirect_to') || '/portal/overview';
-  const response = NextResponse.next();
-  const state = issueGoogleOauthState(response, redirectTo);
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: getGoogleRedirectUri(),
@@ -19,9 +17,12 @@ export async function GET(request: NextRequest) {
     scope: 'openid email profile',
     access_type: 'online',
     prompt: 'select_account',
-    state
   });
 
-  const target = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-  return NextResponse.redirect(target, { headers: response.headers });
+  const target = new URL(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  const response = NextResponse.redirect(target);
+  const state = issueGoogleOauthState(response, redirectTo);
+  target.searchParams.set('state', state);
+  response.headers.set('location', target.toString());
+  return response;
 }
