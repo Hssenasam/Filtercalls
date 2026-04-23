@@ -4,6 +4,7 @@
 
 :root {
   color-scheme: dark;
+  --portal-header-height: 124px;
 }
 
 html,
@@ -30,4 +31,14 @@ body {
 .signal-separator {
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(110, 231, 255, 0.7), transparent);
+}
+
+.portal-page-shell {
+  padding-top: calc(var(--portal-header-height) + env(safe-area-inset-top, 0px));
+}
+
+@media (min-width: 768px) {
+  :root {
+    --portal-header-height: 136px;
+  }
 }
