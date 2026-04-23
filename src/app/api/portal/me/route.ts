@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server.js';
 import { getD1 } from '@/lib/db/d1';
 import { ensurePortalAuthSchema, findUserByEmail, getSessionUser, hashPassword, requireCsrf, validatePasswordPolicy, verifyPassword } from '@/lib/auth/portal';
-import { getEffectivePlanForUser, getMonthlyUsage } from '@/lib/billing/state';
+import { getEffectivePlanForUser, getMonthlyUsage, getResourceCounts } from '@/lib/billing/state';
 
 export const runtime = 'edge';
 
@@ -14,9 +14,10 @@ export async function GET(request: NextRequest) {
   const user = await getSessionUser(db, request);
   if (!user) return unauthorized();
 
-  const [{ account, plan }, usage] = await Promise.all([
+  const [{ account, plan }, usage, resources] = await Promise.all([
     getEffectivePlanForUser(db, user.id),
-    getMonthlyUsage(db, user.id)
+    getMonthlyUsage(db, user.id),
+    getResourceCounts(db, user.id)
   ]);
 
   return NextResponse.json({
@@ -29,6 +30,10 @@ export async function GET(request: NextRequest) {
     last_login_at: user.last_login_at,
     account_created_at: account.created_at,
     billing_status: account.billing_status,
+    resources: {
+      api_keys: resources.apiKeys,
+      webhooks: resources.webhooks
+    },
     plan: {
       id: plan.id,
       label: plan.label,
