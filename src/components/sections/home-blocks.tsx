@@ -30,16 +30,24 @@ const AUDIENCES = [
     icon: User,
     label: 'For Individuals',
     headline: 'Stop unknown calls before they reach you',
-    points: ['Identify suspicious caller patterns', 'Block spam before it rings', 'Check any number, instantly'],
+    points: [
+      'Identify suspicious caller patterns',
+      'Block spam before it rings',
+      'Check any number, instantly',
+    ],
     cta: 'Analyze now',
     href: '/analysis',
     primary: false,
   },
   {
     icon: Building2,
-    label: 'For Businesses & Developers',
+    label: 'For Businesses and Developers',
     headline: 'Integrate phone intelligence into your stack',
-    points: ['REST API with full documentation', 'Webhook-based call screening', '25 API keys on Pro plan'],
+    points: [
+      'REST API with full documentation',
+      'Webhook-based call screening',
+      '25 API keys on Pro plan',
+    ],
     cta: 'View API docs',
     href: '/api-docs',
     primary: true,
@@ -69,7 +77,6 @@ export function HomeBlocks() {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative">
-            {/* Connector line — desktop only */}
             <div className="hidden md:block absolute top-10 left-[calc(16.66%+1rem)] right-[calc(16.66%+1rem)] h-px bg-gradient-to-r from-violet-500/0 via-violet-500/20 to-violet-500/0" />
 
             {STEPS.map(({ number, icon: Icon, title, desc }, i) => (
@@ -79,14 +86,14 @@ export function HomeBlocks() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.45, delay: i * 0.1 }}
-                className="flex flex-col gap-4 p-6 rounded-2xl bg-white/[0.04] border border-white/[0.07] relative"
+                className="flex flex-col gap-4 p-6 rounded-2xl bg-white/[0.04] border border-white/[0.07]"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-violet-500/40 font-mono text-sm font-bold tracking-wider">
                     {number}
                   </span>
                   <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/15 flex items-center justify-center">
-                    <Icon className="w-4.5 h-4.5 text-violet-400" />
+                    <Icon className="w-4 h-4 text-violet-400" />
                   </div>
                 </div>
                 <div>
@@ -111,7 +118,7 @@ export function HomeBlocks() {
               Built for every use case
             </h2>
             <p className="text-white/45 text-base">
-              Whether you're checking one number or screening thousands.
+              Whether you are checking one number or screening thousands.
             </p>
           </motion.div>
 
@@ -130,20 +137,30 @@ export function HomeBlocks() {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${primary ? 'bg-violet-500/20 border border-violet-500/25' : 'bg-white/[0.06] border border-white/[0.1]'}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    primary
+                      ? 'bg-violet-500/20 border border-violet-500/25'
+                      : 'bg-white/[0.06] border border-white/[0.1]'
+                  }`}>
                     <Icon className={`w-5 h-5 ${primary ? 'text-violet-300' : 'text-white/60'}`} />
                   </div>
-                  <span className={`text-xs font-medium tracking-wide uppercase ${primary ? 'text-violet-300/70' : 'text-white/40'}`}>
+                  <span className={`text-xs font-medium tracking-wide uppercase ${
+                    primary ? 'text-violet-300/70' : 'text-white/40'
+                  }`}>
                     {label}
                   </span>
                 </div>
 
                 <div>
-                  <h3 className="text-white font-semibold text-lg leading-snug mb-4">{headline}</h3>
+                  <h3 className="text-white font-semibold text-lg leading-snug mb-4">
+                    {headline}
+                  </h3>
                   <ul className="flex flex-col gap-2">
                     {points.map((p) => (
                       <li key={p} className="flex items-start gap-2 text-sm text-white/50">
-                        <CheckCheck className={`w-4 h-4 mt-0.5 shrink-0 ${primary ? 'text-violet-400/70' : 'text-white/30'}`} />
+                        <CheckCheck className={`w-4 h-4 mt-0.5 shrink-0 ${
+                          primary ? 'text-violet-400/70' : 'text-white/30'
+                        }`} />
                         {p}
                       </li>
                     ))}
