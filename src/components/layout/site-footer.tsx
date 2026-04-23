@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Zap, ArrowRight } from 'lucide-react';
 
-const FOOTER_LINKS = {
+const FOOTER_LINKS: Record<string, { label: string; href: string }[]> = {
   Product: [
     { label: 'Number Analysis', href: '/analysis' },
     { label: 'API', href: '/api-docs' },
@@ -52,23 +52,26 @@ export function SiteFooter() {
             <span className="text-white font-semibold text-[15px]">FilterCalls</span>
           </Link>
           <p className="text-white/35 text-sm leading-relaxed">
-            Phone number intelligence platform for individuals, developers, and teams who need trusted caller context.
+            Phone number intelligence platform for individuals, developers,
+            and teams who need trusted caller context.
           </p>
         </div>
 
         {/* Link columns */}
         {Object.entries(FOOTER_LINKS).map(([group, links]) => (
           <div key={group} className="flex flex-col gap-4">
-            <p className="text-white/60 text-xs font-semibold uppercase tracking-widest">{group}</p>
+            <p className="text-white/60 text-xs font-semibold uppercase tracking-widest">
+              {group}
+            </p>
             <ul className="flex flex-col gap-2.5">
               {links.map(({ label, href }) => (
                 <li key={label}>
-                  <Link
+                  <a
                     href={href}
                     className="text-white/40 hover:text-white/80 text-sm transition-colors"
                   >
                     {label}
-                  </Link>
+                  </a>
                 </li>
               ))}
             </ul>
