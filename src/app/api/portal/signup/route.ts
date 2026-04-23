@@ -12,6 +12,7 @@ import {
   validatePasswordPolicy
 } from '@/lib/auth/portal';
 import { enforceWindowRateLimit } from '@/lib/auth/portal-rate-limit';
+import { canSendTransactionalEmail, sendVerificationEmail } from '@/lib/email/transactional';
 
 export const runtime = 'edge';
 
@@ -79,11 +80,47 @@ export async function POST(request: NextRequest) {
     step = 'verification';
     const verification = await createEmailVerification(db, userId, email);
 
-    if (process.env.RESEND_API_KEY) {
-      console.info(`email verification queued for ${maskEmail(email)}`);
-    } else {
-      console.info(`email verification link for ${maskEmail(email)}: ${verification.verify_url}`);
+    if (canSendTransactionalEmail()) {
+      console.info(`[email] verification send started user=${userId} email=${maskEmail(email)}`);
+      const emailResult = await sendVerificationEmail({
+        to: email,
+        verificationUrl: verification.verify_url,
+        fullName
+      });
+
+      if (!emailResult.ok) {
+        console.error(
+          `[email] verification send failed user=${userId} email=${maskEmail(email)} status=${emailResult.providerStatus ?? 'n/a'} error=${emailResult.error ?? 'unknown'}`
+        );
+        await db.prepare('DELETE FROM email_verifications WHERE user_id = ?').bind(userId).run();
+        await db.prepare('DELETE FROM users WHERE id = ?').bind(userId).run();
+        return NextResponse.json(
+          {
+            error: {
+              code: 'VERIFICATION_EMAIL_FAILED',
+              message: 'We could not send your verification email right now. Please try signing up again in a moment.'
+            }
+          },
+          { status: 502 }
+        );
+      }
+
+      console.info(`[email] verification send success user=${userId} email=${maskEmail(email)} messageId=${emailResult.id}`);
+
+      return NextResponse.json(
+        {
+          id: userId,
+          email,
+          email_verified_at: null,
+          verification_required: true,
+          verification_email_sent: true,
+          next_step: 'verify_email'
+        },
+        { status: 201 }
+      );
     }
+
+    console.warn(`[email] verification delivery disabled; logging link for ${maskEmail(email)}: ${verification.verify_url}`);
 
     return NextResponse.json(
       {
@@ -91,6 +128,7 @@ export async function POST(request: NextRequest) {
         email,
         email_verified_at: null,
         verification_required: true,
+        verification_email_sent: false,
         verify_url: verification.verify_url,
         next_step: 'verify_email'
       },
