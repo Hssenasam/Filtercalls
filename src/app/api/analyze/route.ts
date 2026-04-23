@@ -17,17 +17,50 @@ import { getD1 } from '@/lib/db/d1';
 
 export const runtime = 'edge';
 
+const VALID_ISO_PATTERN = /^[A-Z]{2}$/;
+const SAFE_NUMBER_PATTERN = /^[+\d\s\-().]{7,20}$/;
+
 export const OPTIONS = async (request: NextRequest) => optionsResponse(resolveRequestId(request));
 
 export async function POST(request: NextRequest) {
   const requestId = resolveRequestId(request);
 
   try {
-    const { number, country } = (await request.json()) as { number?: string; country?: string };
-
-    if (!number || number.trim().length < 7) {
-      return errorResponse(requestId, 'INVALID_NUMBER', 'Invalid number supplied', 400);
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return errorResponse(requestId, 'INVALID_JSON', 'Request body must be valid JSON', 400);
     }
+
+    if (typeof body !== 'object' || body === null) {
+      return errorResponse(requestId, 'INVALID_BODY', 'Request body must be an object', 400);
+    }
+
+    const { number, country } = body as Record<string, unknown>;
+
+    if (
+      typeof number !== 'string' ||
+      !number.trim() ||
+      number.trim().length < 7 ||
+      number.trim().length > 20
+    ) {
+      return errorResponse(requestId, 'INVALID_NUMBER', 'number must be a string between 7 and 20 characters', 400);
+    }
+
+    if (!SAFE_NUMBER_PATTERN.test(number.trim())) {
+      return errorResponse(requestId, 'INVALID_NUMBER', 'number contains invalid characters', 400);
+    }
+
+    if (
+      country !== undefined &&
+      (typeof country !== 'string' || !VALID_ISO_PATTERN.test(country.toUpperCase()))
+    ) {
+      return errorResponse(requestId, 'INVALID_COUNTRY', 'country must be a valid ISO 3166-1 alpha-2 code (e.g. "US", "DZ")', 400);
+    }
+
+    const safeNumber = number.trim();
+    const safeCountry = typeof country === 'string' ? country.toUpperCase() : undefined;
 
     const db = getDb();
     const apiKey = request.headers.get('x-api-key');
@@ -71,16 +104,28 @@ export async function POST(request: NextRequest) {
     }
 
     const provider = getPhoneProvider();
-    const result = await provider.analyze(number, country);
+    const result = await provider.analyze(safeNumber, safeCountry);
 
-    await persistAnalysis(requestId, { number, country, apiKeyId: apiKeyRecord?.id, userId: apiKeyRecord?.user_id ?? sessionUserId }, result);
+    await persistAnalysis(
+      requestId,
+      { number: safeNumber, country: safeCountry, apiKeyId: apiKeyRecord?.id, userId: apiKeyRecord?.user_id ?? sessionUserId },
+      result
+    );
 
     if (apiKeyRecord) {
-      void dispatchWebhooks({ request, apiKeyId: apiKeyRecord.id, userId: apiKeyRecord.user_id ?? null, analysisId: requestId, riskScore: result.risk_score, payload: result });
+      void dispatchWebhooks({
+        request,
+        apiKeyId: apiKeyRecord.id,
+        userId: apiKeyRecord.user_id ?? null,
+        analysisId: requestId,
+        riskScore: result.risk_score,
+        payload: result
+      });
     }
 
     return withResponseHeaders(NextResponse.json(result), requestId);
-  } catch {
+  } catch (err) {
+    console.error('[analyze/route] Unhandled error:', err instanceof Error ? err.message : String(err));
     return errorResponse(requestId, 'ANALYZE_FAILED', 'Analysis request failed', 500);
   }
 }
