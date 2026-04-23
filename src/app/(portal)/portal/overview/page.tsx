@@ -82,18 +82,36 @@ export default function PortalOverview() {
   }, [router]);
 
   const todayWindow = useMemo(() => dashboard?.windows.find((window) => window.label === 'last_24h') ?? dashboard?.windows[0], [dashboard]);
-  const monthWindow = useMemo(() => dashboard?.windows.find((window) => window.label === 'last_30d') ?? dashboard?.windows[dashboard.windows.length - 1], [dashboard]);
   const hasActivity = (dashboard?.recent.length ?? 0) > 0;
+  const usagePct = profile?.plan ? Math.round(((profile.plan.usage.analyses_used ?? 0) / Math.max(1, profile.plan.limits.monthlyAnalyses)) * 100) : 0;
+
   const onboardingItems = useMemo(() => {
     if (!profile) return [];
+    const hasKey = (profile.resources?.api_keys ?? 0) > 0;
+    const hasWebhook = (profile.resources?.webhooks ?? 0) > 0;
+    const hasUsage = (profile.plan?.usage.analyses_used ?? 0) > 0;
+
     return [
       { label: 'Verify email', done: !!profile.email_verified_at, href: '/verify-email' },
-      { label: 'Create your first API key', done: (profile.resources?.api_keys ?? 0) > 0, href: '/portal/keys' },
-      { label: 'Run your first live analysis', done: (profile.plan?.usage.analyses_used ?? 0) > 0, href: '/analysis' },
-      { label: 'Attach a webhook', done: (profile.resources?.webhooks ?? 0) > 0, href: '/portal/webhooks' }
+      { label: 'Create your first API key', done: hasKey, href: '/portal/keys' },
+      { label: 'Attach a webhook', done: hasWebhook, href: '/portal/webhooks' },
+      { label: 'Run your first live analysis', done: hasUsage, href: '/analysis' }
     ];
   }, [profile]);
   const onboardingDone = onboardingItems.filter((item) => item.done).length;
+
+  const primaryAction = useMemo(() => {
+    if (!profile) return { label: 'Open portal', href: '/portal/overview', desc: 'Loading account state…' };
+    const hasKey = (profile.resources?.api_keys ?? 0) > 0;
+    const hasWebhook = (profile.resources?.webhooks ?? 0) > 0;
+    const hasUsage = (profile.plan?.usage.analyses_used ?? 0) > 0;
+
+    if (!hasKey) return { label: 'Create API key', href: '/portal/keys', desc: 'Start by generating secure credentials for your app.' };
+    if (hasKey && !hasWebhook) return { label: 'Add webhook', href: '/portal/webhooks', desc: 'Push detections into your workflow in real time.' };
+    if (hasKey && hasWebhook && !hasUsage) return { label: 'Run first live analysis', href: '/analysis', desc: 'Send your first request and populate the dashboard.' };
+    if ((profile.plan?.usage.analyses_remaining ?? 0) <= 20) return { label: 'Upgrade to Pro', href: '/portal/billing', desc: 'You are nearing your monthly limit. Unlock more volume before you hit the cap.' };
+    return { label: 'Open usage analytics', href: '/portal/usage', desc: 'Your workspace is configured. Review performance and keep optimizing.' };
+  }, [profile]);
 
   if (state === 'loading') {
     return <section className="space-y-4"><h1 className="text-3xl font-semibold">Portal overview</h1><p className="text-slate-300">Loading your command center…</p></section>;
@@ -116,10 +134,14 @@ export default function PortalOverview() {
                 <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">{profile.email_verified_at ? 'Email verified' : 'Verification pending'}</span>
                 <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">{profile.plan?.usage.analyses_remaining ?? 0} analyses remaining</span>
               </div>
+              <div className="rounded-2xl border border-sky-400/15 bg-sky-400/10 px-4 py-3 text-sm text-sky-100">
+                <p className="font-medium">Recommended next move</p>
+                <p className="mt-1 text-sky-100/80">{primaryAction.desc}</p>
+              </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3 lg:w-[360px] lg:grid-cols-1">
-              <Link href="/analysis" className="rounded-2xl bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 px-4 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-blue-950/35 transition hover:opacity-95">Run first analysis</Link>
+              <Link href={primaryAction.href} className="rounded-2xl bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 px-4 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-blue-950/35 transition hover:opacity-95">{primaryAction.label}</Link>
               <Link href="/portal/keys" className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm font-medium text-white transition hover:bg-white/[0.08]">Create API key</Link>
               <Link href="/portal/billing" className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm font-medium text-white transition hover:bg-white/[0.08]">Upgrade plan</Link>
             </div>
@@ -225,22 +247,22 @@ export default function PortalOverview() {
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-6 sm:p-8">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.24em] text-slate-400">Quick actions</p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">Move the account forward</h2>
+                <p className="text-xs font-medium uppercase tracking-[0.24em] text-slate-400">Upgrade path</p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">Free → Pro → Custom</h2>
               </div>
+              <Link href="/portal/billing" className="text-sm font-medium text-sky-300 hover:text-sky-200">View billing</Link>
             </div>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {[
-                { label: 'Create API key', href: '/portal/keys', desc: 'Generate secure credentials for your integration.' },
-                { label: 'Add webhook', href: '/portal/webhooks', desc: 'Push detections to your workflow automatically.' },
-                { label: 'View docs', href: '/portal/docs', desc: 'Open the implementation guide and examples.' },
-                { label: 'Billing & limits', href: '/portal/billing', desc: 'See quota, pricing, and upgrade options.' }
-              ].map((action) => (
-                <Link key={action.label} href={action.href} className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 transition hover:bg-white/[0.05]">
-                  <p className="text-base font-medium text-white">{action.label}</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">{action.desc}</p>
-                </Link>
-              ))}
+            <div className="mt-5 rounded-3xl border border-sky-400/15 bg-sky-400/10 p-5">
+              <p className="text-sm font-medium text-white">Usage pressure</p>
+              <p className="mt-2 text-3xl font-semibold text-white">{profile.plan?.usage.analyses_used ?? 0}/{profile.plan?.limits.monthlyAnalyses ?? 100}</p>
+              <p className="mt-2 text-sm text-sky-100/80">Free includes 100 analyses per month. Upgrade when you need more volume, more keys, or more automation.</p>
+              <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-500" style={{ width: `${Math.min(100, usagePct)}%` }} />
+              </div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link href="/portal/billing" className="rounded-2xl bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-950/35">Upgrade to Pro</Link>
+                <Link href="/portal/billing#custom-plan" className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[0.08]">Contact for custom</Link>
+              </div>
             </div>
           </div>
 
@@ -314,7 +336,7 @@ export default function PortalOverview() {
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Suggested next move</p>
-              <p className="mt-2 text-sm leading-6 text-slate-300">Create an API key, send a first request, and then attach a webhook so detections stream into your own workflow.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">{primaryAction.desc}</p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Link href="/portal/docs" className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-medium text-white transition hover:bg-white/[0.08]">Open docs</Link>
