@@ -101,17 +101,27 @@ export default function PortalOverview() {
   const onboardingDone = onboardingItems.filter((item) => item.done).length;
 
   const primaryAction = useMemo(() => {
-    if (!profile) return { label: 'Open portal', href: '/portal/overview', desc: 'Loading account state…' };
+    if (!profile) return { label: 'Open portal', href: '/portal/overview', desc: 'Loading account state…', key: 'open' };
     const hasKey = (profile.resources?.api_keys ?? 0) > 0;
     const hasWebhook = (profile.resources?.webhooks ?? 0) > 0;
     const hasUsage = (profile.plan?.usage.analyses_used ?? 0) > 0;
 
-    if (!hasKey) return { label: 'Create API key', href: '/portal/keys', desc: 'Start by generating secure credentials for your app.' };
-    if (hasKey && !hasWebhook) return { label: 'Add webhook', href: '/portal/webhooks', desc: 'Push detections into your workflow in real time.' };
-    if (hasKey && hasWebhook && !hasUsage) return { label: 'Run first live analysis', href: '/analysis', desc: 'Send your first request and populate the dashboard.' };
-    if ((profile.plan?.usage.analyses_remaining ?? 0) <= 20) return { label: 'Upgrade to Pro', href: '/portal/billing', desc: 'You are nearing your monthly limit. Unlock more volume before you hit the cap.' };
-    return { label: 'Open usage analytics', href: '/portal/usage', desc: 'Your workspace is configured. Review performance and keep optimizing.' };
+    if (!hasKey) return { label: 'Create API key', href: '/portal/keys', desc: 'Start by generating secure credentials for your app.', key: 'keys' };
+    if (hasKey && !hasWebhook) return { label: 'Add webhook', href: '/portal/webhooks', desc: 'Push detections into your workflow in real time.', key: 'hooks' };
+    if (hasKey && hasWebhook && !hasUsage) return { label: 'Run first live analysis', href: '/analysis', desc: 'Send your first request and populate the dashboard.', key: 'analysis' };
+    if ((profile.plan?.usage.analyses_remaining ?? 0) <= 20) return { label: 'Upgrade to Pro', href: '/portal/billing', desc: 'You are nearing your monthly limit. Unlock more volume before you hit the cap.', key: 'billing' };
+    return { label: 'Open usage analytics', href: '/portal/usage', desc: 'Your workspace is configured. Review performance and keep optimizing.', key: 'usage' };
   }, [profile]);
+
+  const secondaryActions = useMemo(() => {
+    const actions = [
+      { label: 'Run analysis', href: '/analysis', key: 'analysis' },
+      { label: 'Create API key', href: '/portal/keys', key: 'keys' },
+      { label: 'Add webhook', href: '/portal/webhooks', key: 'hooks' },
+      { label: 'Upgrade plan', href: '/portal/billing', key: 'billing' }
+    ];
+    return actions.filter((action) => action.key !== primaryAction.key).slice(0, 2);
+  }, [primaryAction]);
 
   if (state === 'loading') {
     return <section className="space-y-4"><h1 className="text-3xl font-semibold">Portal overview</h1><p className="text-slate-300">Loading your command center…</p></section>;
@@ -140,10 +150,13 @@ export default function PortalOverview() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 lg:w-[360px] lg:grid-cols-1">
+            <div className="grid gap-3 lg:w-[320px]">
               <Link href={primaryAction.href} className="rounded-2xl bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 px-4 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-blue-950/35 transition hover:opacity-95">{primaryAction.label}</Link>
-              <Link href="/portal/keys" className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm font-medium text-white transition hover:bg-white/[0.08]">Create API key</Link>
-              <Link href="/portal/billing" className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm font-medium text-white transition hover:bg-white/[0.08]">Upgrade plan</Link>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                {secondaryActions.map((action) => (
+                  <Link key={action.key} href={action.href} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm font-medium text-white transition hover:bg-white/[0.08]">{action.label}</Link>
+                ))}
+              </div>
             </div>
           </div>
         </div>
