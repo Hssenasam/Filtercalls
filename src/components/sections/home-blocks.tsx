@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { Route } from 'next';
 import { motion } from 'framer-motion';
 import { Phone, ScanLine, CheckCheck, User, Building2, ArrowRight } from 'lucide-react';
 
@@ -59,7 +60,6 @@ export function HomeBlocks() {
     <section className="py-24 px-4">
       <div className="max-w-6xl mx-auto flex flex-col gap-24">
 
-        {/* How it works */}
         <div className="flex flex-col gap-12">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -78,7 +78,6 @@ export function HomeBlocks() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative">
             <div className="hidden md:block absolute top-10 left-[calc(16.66%+1rem)] right-[calc(16.66%+1rem)] h-px bg-gradient-to-r from-violet-500/0 via-violet-500/20 to-violet-500/0" />
-
             {STEPS.map(({ number, icon: Icon, title, desc }, i) => (
               <motion.div
                 key={number}
@@ -105,7 +104,6 @@ export function HomeBlocks() {
           </div>
         </div>
 
-        {/* Audience split */}
         <div className="flex flex-col gap-12">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -150,11 +148,8 @@ export function HomeBlocks() {
                     {label}
                   </span>
                 </div>
-
                 <div>
-                  <h3 className="text-white font-semibold text-lg leading-snug mb-4">
-                    {headline}
-                  </h3>
+                  <h3 className="text-white font-semibold text-lg leading-snug mb-4">{headline}</h3>
                   <ul className="flex flex-col gap-2">
                     {points.map((p) => (
                       <li key={p} className="flex items-start gap-2 text-sm text-white/50">
@@ -166,8 +161,7 @@ export function HomeBlocks() {
                     ))}
                   </ul>
                 </div>
-
-                <Link
+                <a
                   href={href}
                   className={`mt-auto inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 active:scale-[0.97] ${
                     primary
@@ -177,7 +171,7 @@ export function HomeBlocks() {
                 >
                   {cta}
                   <ArrowRight className="w-4 h-4" />
-                </Link>
+                </a>
               </motion.div>
             ))}
           </div>

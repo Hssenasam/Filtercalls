@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { Route } from 'next';
 import { motion } from 'framer-motion';
 import { Check, ArrowRight, Sparkles } from 'lucide-react';
 import { PLAN_DEFINITIONS } from '@/lib/billing/plans';
@@ -13,7 +14,7 @@ const FREE_FEATURES = [
   `${free.limits.apiKeys} API keys`,
   `${free.limits.webhooks} webhook`,
   'Full trust scoring',
-  'Country & carrier context',
+  'Country and carrier context',
 ];
 
 const PRO_FEATURES = [
@@ -63,7 +64,6 @@ export function HomePricing() {
               </div>
               <p className="text-white/35 text-xs mt-1">No credit card required</p>
             </div>
-
             <ul className="flex flex-col gap-3">
               {FREE_FEATURES.map((f) => (
                 <li key={f} className="flex items-center gap-2.5 text-sm text-white/55">
@@ -72,9 +72,8 @@ export function HomePricing() {
                 </li>
               ))}
             </ul>
-
             <Link
-              href="/analysis"
+              href={'/analysis' as Route}
               className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium text-white/80 hover:text-white bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] transition-all duration-200 active:scale-[0.97]"
             >
               Analyze now
@@ -87,59 +86,42 @@ export function HomePricing() {
             initial={{ opacity: 0, y: 18 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.45, delay: 0.08 }}
-            className="relative flex flex-col gap-6 p-7 rounded-2xl bg-gradient-to-b from-violet-500/12 to-indigo-500/6 border border-violet-500/25"
+            transition={{ duration: 0.45, delay: 0.1 }}
+            className="flex flex-col gap-6 p-7 rounded-2xl bg-gradient-to-b from-violet-500/10 to-indigo-500/5 border border-violet-500/20 relative overflow-hidden"
           >
-            {/* Top highlight */}
-            <div className="absolute top-0 inset-x-12 h-px bg-gradient-to-r from-transparent via-violet-400/40 to-transparent" />
-
-            {/* Recommended badge */}
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-semibold shadow-lg shadow-violet-500/30">
+            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
+            <div className="flex items-center justify-between">
+              <p className="text-violet-300/80 text-sm font-medium">{pro.label}</p>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-violet-500/15 border border-violet-500/20 text-violet-300 text-xs font-medium">
                 <Sparkles className="w-3 h-3" />
-                Recommended
+                Most popular
               </span>
             </div>
-
             <div>
-              <p className="text-violet-300/70 text-sm font-medium mb-3">{pro.label}</p>
               <div className="flex items-baseline gap-1">
                 <span className="text-4xl font-bold text-white">${pro.monthlyPriceUsd}</span>
                 <span className="text-white/40 text-sm">/ month</span>
               </div>
-              <p className="text-white/35 text-xs mt-1">Cancel anytime</p>
+              <p className="text-white/35 text-xs mt-1">Billed monthly, cancel anytime</p>
             </div>
-
             <ul className="flex flex-col gap-3">
               {PRO_FEATURES.map((f) => (
                 <li key={f} className="flex items-center gap-2.5 text-sm text-white/70">
-                  <Check className="w-4 h-4 text-violet-400 shrink-0" />
+                  <Check className="w-4 h-4 text-violet-400/70 shrink-0" />
                   {f}
                 </li>
               ))}
             </ul>
-
             <Link
-              href="/portal/register"
+              href={'/portal/login' as Route}
               className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-lg shadow-violet-500/25 hover:shadow-violet-500/35 transition-all duration-200 active:scale-[0.97]"
             >
               Get started
               <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>
-        </div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="text-center"
-        >
-          <Link href="/pricing" className="text-sm text-white/35 hover:text-white/60 transition-colors underline underline-offset-4">
-            View full pricing details →
-          </Link>
-        </motion.div>
+        </div>
       </div>
     </section>
   );
