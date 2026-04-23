@@ -17,7 +17,7 @@ const CHIPS = [
 const TRUST_ITEMS = [
   { icon: Globe, label: '160+ countries covered' },
   { icon: Zap, label: 'Instant analysis' },
-  { icon: Shield, label: 'Trust scored 0–100' },
+  { icon: Shield, label: 'Trust scored 0-100' },
 ];
 
 export function HomeHero() {
@@ -29,8 +29,9 @@ export function HomeHero() {
 
   const validate = (v: string) => {
     if (!v.trim()) return 'Enter a phone number to continue.';
-    if (!/^+?[ds-().]{7,20}$/.test(v.trim()))
+    if (v.trim().length < 7 || v.trim().length > 20) {
       return 'Use international format: +1 202 555 0100';
+    }
     return '';
   };
 
@@ -48,7 +49,7 @@ export function HomeHero() {
 
   return (
     <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-4 pt-24 pb-16 overflow-hidden">
-      {/* Background radials — max 2, controlled */}
+      {/* Background radials */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-violet-600/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-[15%] w-[400px] h-[400px] bg-indigo-600/8 rounded-full blur-[100px]" />
@@ -73,7 +74,7 @@ export function HomeHero() {
           transition={{ duration: 0.55, delay: 0.05 }}
           className="text-4xl sm:text-5xl md:text-6xl font-bold text-white tracking-tight leading-[1.08]"
         >
-          Know who's calling.
+          Know who&apos;s calling.
           <br />
           <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
             Before you answer.
@@ -99,10 +100,8 @@ export function HomeHero() {
           className="w-full"
         >
           <div className="relative rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.03] border border-white/[0.09] p-5 shadow-2xl shadow-black/40">
-            {/* top-edge highlight */}
             <div className="absolute top-0 inset-x-8 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full" />
 
-            {/* Input shell */}
             <div
               className={`flex flex-col sm:flex-row gap-2 rounded-xl border transition-all duration-200 overflow-hidden ${
                 error
@@ -131,7 +130,7 @@ export function HomeHero() {
                   {loading ? (
                     <>
                       <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      Analyzing…
+                      Analyzing...
                     </>
                   ) : (
                     <>
@@ -143,7 +142,6 @@ export function HomeHero() {
               </div>
             </div>
 
-            {/* Error message */}
             {error && (
               <p className="mt-2.5 text-sm text-red-400 flex items-center gap-1.5 px-1">
                 <span className="w-1 h-1 rounded-full bg-red-400 shrink-0" />
