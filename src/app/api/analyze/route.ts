@@ -12,6 +12,8 @@ import {
   withResponseHeaders
 } from '@/lib/server/phase3';
 import { assertLimit } from '@/lib/billing/state';
+import { getSessionUser } from '@/lib/auth/portal';
+import { getD1 } from '@/lib/db/d1';
 
 export const runtime = 'edge';
 
@@ -29,6 +31,18 @@ export async function POST(request: NextRequest) {
 
     const db = getDb();
     const apiKey = request.headers.get('x-api-key');
+
+    // NEW: session-based auth for browser users
+    if (!apiKey) {
+      const d1 = getD1();
+      if (!d1) return errorResponse(requestId, 'DB_UNAVAILABLE', 'Database unavailable', 503);
+
+      const user = await getSessionUser(d1, request);
+      if (!user) {
+        return errorResponse(requestId, 'UNAUTHORIZED', 'Login required to run analysis', 401);
+      }
+    }
+
     if (apiKey && !db) {
       return errorResponse(requestId, 'DB_UNAVAILABLE', 'D1 is not configured', 503);
     }
