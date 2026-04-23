@@ -1,3 +1,5 @@
+'use client';
+
 import { motion } from 'framer-motion';
 import { Phone, ScanLine, CheckCheck, User, Building2, ArrowRight } from 'lucide-react';
 
