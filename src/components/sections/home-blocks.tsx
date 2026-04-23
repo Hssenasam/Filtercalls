@@ -1,5 +1,3 @@
-import Link from 'next/link';
-import type { Route } from 'next';
 import { motion } from 'framer-motion';
 import { Phone, ScanLine, CheckCheck, User, Building2, ArrowRight } from 'lucide-react';
 
