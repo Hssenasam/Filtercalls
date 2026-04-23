@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
 
     const db = getDb();
     const apiKey = request.headers.get('x-api-key');
+    let sessionUserId: string | null = null;
 
-    // NEW: session-based auth for browser users
     if (!apiKey) {
       const d1 = getD1();
       if (!d1) return errorResponse(requestId, 'DB_UNAVAILABLE', 'Database unavailable', 503);
@@ -40,6 +40,12 @@ export async function POST(request: NextRequest) {
       const user = await getSessionUser(d1, request);
       if (!user) {
         return errorResponse(requestId, 'UNAUTHORIZED', 'Login required to run analysis', 401);
+      }
+      sessionUserId = user.id;
+
+      const planCheck = await assertLimit(d1, user.id, { type: 'analyses', amount: 1 });
+      if (!planCheck.ok) {
+        return errorResponse(requestId, 'PLAN_LIMIT_EXCEEDED', `Monthly analysis limit reached (${planCheck.limit}) for current plan`, 402);
       }
     }
 
@@ -67,7 +73,7 @@ export async function POST(request: NextRequest) {
     const provider = getPhoneProvider();
     const result = await provider.analyze(number, country);
 
-    await persistAnalysis(requestId, { number, country, apiKeyId: apiKeyRecord?.id, userId: apiKeyRecord?.user_id ?? null }, result);
+    await persistAnalysis(requestId, { number, country, apiKeyId: apiKeyRecord?.id, userId: apiKeyRecord?.user_id ?? sessionUserId }, result);
 
     if (apiKeyRecord) {
       void dispatchWebhooks({ request, apiKeyId: apiKeyRecord.id, userId: apiKeyRecord.user_id ?? null, analysisId: requestId, riskScore: result.risk_score, payload: result });
