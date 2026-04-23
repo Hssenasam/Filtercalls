@@ -6,16 +6,24 @@ export { hashPassword, validatePasswordPolicy, verifyPassword } from './password
 
 const SESSION_COOKIE = 'fc_session';
 const CSRF_COOKIE = 'fc_csrf';
+const GOOGLE_STATE_COOKIE = 'fc_google_oauth_state';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
+const EMAIL_VERIFICATION_TTL_SECONDS = 60 * 60 * 24;
 
 type JwtPayload = { sid: string; uid: string; exp: number };
 
-type UserRow = {
+export type UserRow = {
   id: string;
   email: string;
   password_hash: string;
   email_verified_at: number | null;
   disabled_at: number | null;
+  full_name: string | null;
+  phone: string | null;
+  phone_normalized: string | null;
+  auth_provider: string | null;
+  google_sub: string | null;
+  last_login_at: number | null;
 };
 
 const b64url = (bytes: Uint8Array) => {
@@ -74,6 +82,34 @@ export const maskEmail = (email: string) => {
   const [name, domain] = email.split('@');
   if (!name || !domain) return '***';
   return `${name[0]}***@${domain}`;
+};
+
+export const normalizeEmail = (email: string) => email.trim().toLowerCase();
+export const normalizePhone = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const prefixed = trimmed.startsWith('+') ? `+${trimmed.slice(1).replace(/\D/g, '')}` : trimmed.replace(/\D/g, '');
+  const normalized = prefixed.replace(/(?!^)\+/g, '');
+  if (normalized.replace(/\D/g, '').length < 8) return null;
+  return normalized;
+};
+export const isEmailIdentifier = (value: string) => value.includes('@');
+
+const mapUserRow = (row: Record<string, unknown> | null): UserRow | null => {
+  if (!row) return null;
+  return {
+    id: String(row.id ?? ''),
+    email: String(row.email ?? ''),
+    password_hash: String(row.password_hash ?? ''),
+    email_verified_at: row.email_verified_at == null ? null : Number(row.email_verified_at),
+    disabled_at: row.disabled_at == null ? null : Number(row.disabled_at),
+    full_name: row.full_name == null ? null : String(row.full_name),
+    phone: row.phone == null ? null : String(row.phone),
+    phone_normalized: row.phone_normalized == null ? null : String(row.phone_normalized),
+    auth_provider: row.auth_provider == null ? null : String(row.auth_provider),
+    google_sub: row.google_sub == null ? null : String(row.google_sub),
+    last_login_at: row.last_login_at == null ? null : Number(row.last_login_at)
+  };
 };
 
 export const signSessionJwt = async (payload: JwtPayload) => {
@@ -148,9 +184,10 @@ export const getSessionUser = async (db: D1DatabaseLike, request: NextRequest): 
 
   await db.prepare('UPDATE sessions SET last_seen_at = ?, expires_at = ? WHERE id = ?').bind(now, now + SESSION_TTL_SECONDS, session.id).run();
 
-  const user = await db.prepare('SELECT id, email, password_hash, email_verified_at, disabled_at FROM users WHERE id = ?').bind(payload.uid).first<UserRow>();
-  if (!user || user.disabled_at) return null;
-  return user;
+  const user = await db.prepare('SELECT id, email, password_hash, email_verified_at, disabled_at, full_name, phone, phone_normalized, auth_provider, google_sub, last_login_at FROM users WHERE id = ?').bind(payload.uid).first<Record<string, unknown>>();
+  const mapped = mapUserRow(user);
+  if (!mapped || mapped.disabled_at) return null;
+  return mapped;
 };
 
 export const setSessionCookies = async (response: NextResponse, jwt: string, exp: number) => {
@@ -176,8 +213,25 @@ export const getClientIp = async () => (await headers()).get('cf-connecting-ip')
 
 export const getPortalBaseUrl = () => process.env.PORTAL_BASE_URL ?? 'http://localhost:3000';
 
+export const getGoogleRedirectUri = () => `${getPortalBaseUrl()}/api/portal/oauth/google/callback`;
+
 export const findUserByEmail = async (db: D1DatabaseLike, email: string) =>
-  db.prepare('SELECT id, email, password_hash, email_verified_at, disabled_at FROM users WHERE email = ? LIMIT 1').bind(email.toLowerCase().trim()).first<UserRow>();
+  mapUserRow(await db.prepare('SELECT id, email, password_hash, email_verified_at, disabled_at, full_name, phone, phone_normalized, auth_provider, google_sub, last_login_at FROM users WHERE email = ? LIMIT 1').bind(normalizeEmail(email)).first<Record<string, unknown>>());
+
+export const findUserByPhone = async (db: D1DatabaseLike, phone: string) => {
+  const normalized = normalizePhone(phone);
+  if (!normalized) return null;
+  return mapUserRow(await db.prepare('SELECT id, email, password_hash, email_verified_at, disabled_at, full_name, phone, phone_normalized, auth_provider, google_sub, last_login_at FROM users WHERE phone_normalized = ? LIMIT 1').bind(normalized).first<Record<string, unknown>>());
+};
+
+export const findUserByIdentifier = async (db: D1DatabaseLike, identifier: string) => {
+  return isEmailIdentifier(identifier) ? findUserByEmail(db, identifier) : findUserByPhone(db, identifier);
+};
+
+export const touchLastLogin = async (db: D1DatabaseLike, userId: string) => {
+  const now = Math.floor(Date.now() / 1000);
+  await db.prepare('UPDATE users SET last_login_at = ?, updated_at = ? WHERE id = ?').bind(now, now, userId).run();
+};
 
 export const genericAuthError = { error: { code: 'UNAUTHORIZED', message: 'Invalid credentials' } };
 
@@ -186,3 +240,49 @@ export const getRequestMeta = async () => ({ ip: await getClientIp(), userAgent:
 export const hashToken = (token: string) => sha256(token);
 
 export const getServerCookie = async (name: string) => (await cookies()).get(name)?.value;
+
+export const createEmailVerification = async (db: D1DatabaseLike, userId: string, email: string) => {
+  const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+  const tokenHash = await hashToken(token);
+  const now = Math.floor(Date.now() / 1000);
+  const expires = now + EMAIL_VERIFICATION_TTL_SECONDS;
+  await db.prepare('INSERT OR REPLACE INTO email_verifications (token_hash, user_id, email, expires_at, used_at, created_at) VALUES (?, ?, ?, ?, NULL, ?)').bind(tokenHash, userId, normalizeEmail(email), expires, now).run();
+  return { token, expires_at: expires, verify_url: `${getPortalBaseUrl()}/verify-email?token=${encodeURIComponent(token)}` };
+};
+
+export const consumeEmailVerification = async (db: D1DatabaseLike, token: string) => {
+  const tokenHash = await hashToken(token);
+  const now = Math.floor(Date.now() / 1000);
+  const row = await db.prepare('SELECT token_hash, user_id, email, expires_at, used_at FROM email_verifications WHERE token_hash = ? LIMIT 1').bind(tokenHash).first<{ token_hash: string; user_id: string; email: string; expires_at: number; used_at: number | null }>();
+  if (!row || row.used_at || row.expires_at < now) return null;
+  await db.prepare('UPDATE email_verifications SET used_at = ? WHERE token_hash = ?').bind(now, tokenHash).run();
+  await db.prepare('UPDATE users SET email_verified_at = ?, updated_at = ? WHERE id = ?').bind(now, now, row.user_id).run();
+  return row;
+};
+
+export const issueGoogleOauthState = (response: NextResponse, redirectTo?: string | null) => {
+  const state = crypto.randomUUID().replace(/-/g, '');
+  response.cookies.set(GOOGLE_STATE_COOKIE, JSON.stringify({ state, redirectTo: redirectTo || '/portal/overview' }), {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 10
+  });
+  return state;
+};
+
+export const readGoogleOauthState = (request: NextRequest) => {
+  const raw = request.cookies.get(GOOGLE_STATE_COOKIE)?.value;
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { state: string; redirectTo?: string };
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+export const clearGoogleOauthState = (response: NextResponse) => {
+  response.cookies.set(GOOGLE_STATE_COOKIE, '', { httpOnly: true, secure: true, sameSite: 'lax', path: '/', expires: new Date(0) });
+};
