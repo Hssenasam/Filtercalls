@@ -13,11 +13,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setUnverifiedEmail(null);
 
     try {
       const response = await fetch('/api/portal/login', {
@@ -28,6 +30,10 @@ export default function LoginPage() {
 
       const data = await response.json().catch(() => null);
       if (!response.ok) {
+        const code = data?.error?.code;
+        if (code === 'EMAIL_NOT_VERIFIED') {
+          setUnverifiedEmail(data?.error?.email ?? null);
+        }
         setError(data?.error?.message ?? 'Login failed. Please check your credentials.');
         return;
       }
@@ -82,6 +88,11 @@ export default function LoginPage() {
           </div>
 
           {error ? <p className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-100">{error}</p> : null}
+          {unverifiedEmail ? (
+            <Link href={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`} className="inline-flex w-full items-center justify-center rounded-2xl border border-sky-400/20 bg-sky-400/10 px-4 py-3 text-sm font-semibold text-sky-100 transition hover:bg-sky-400/15">
+              Open verification status
+            </Link>
+          ) : null}
 
           <button className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-950/40 transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70" disabled={loading}>
             {loading ? 'Signing you in...' : 'Log in'}
