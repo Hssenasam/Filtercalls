@@ -3,8 +3,16 @@ export const runtime = 'edge';
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { AuthShell } from '@/components/portal/auth-shell';
+
+const googleErrors: Record<string, string> = {
+  google_state_mismatch: 'Google sign-in expired or changed browser context. Please try again from the same tab.',
+  google_not_configured: 'Google sign-in is not configured yet.',
+  google_token_failed: 'Google could not complete token exchange. Please retry in a moment.',
+  google_userinfo_failed: 'Google returned an incomplete account response.',
+  google_account_failed: 'We could not link your Google account right now.'
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +21,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const nextPath = useMemo(() => {
+    const next = searchParams.get('next');
+    return next && next.startsWith('/') ? next : '/portal/overview';
+  }, [searchParams]);
+
+  const googleHref = `/api/portal/oauth/google?redirect_to=${encodeURIComponent(nextPath)}`;
+  const googleError = searchParams.get('error');
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -32,7 +48,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/portal/overview');
+      router.push(nextPath);
       router.refresh();
     } catch {
       setError('Unable to reach the portal right now. Please retry in a moment.');
@@ -46,7 +62,7 @@ export default function LoginPage() {
       eyebrow="Portal access"
       title="Sign in to your FilterCalls workspace"
       subtitle="Access your analytics, keys, billing, and webhook controls from one refined control center."
-      footer={<div className="flex items-center justify-between gap-3"><span>Need an account?</span><Link href="/signup" className="font-medium text-sky-300 hover:text-sky-200">Create one now</Link></div>}
+      footer={<div className="flex items-center justify-between gap-3"><span>Need an account?</span><Link href={`/signup${nextPath !== '/portal/overview' ? `?next=${encodeURIComponent(nextPath)}` : ''}`} className="font-medium text-sky-300 hover:text-sky-200">Create one now</Link></div>}
     >
       <div className="space-y-5">
         <div>
@@ -56,9 +72,9 @@ export default function LoginPage() {
 
         {searchParams.get('created') === '1' ? <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">Account created. Check your inbox, verify your email, then sign in.</div> : null}
         {searchParams.get('verified') === '1' ? <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">Email verified successfully. You can sign in now.</div> : null}
-        {searchParams.get('error') ? <div className="rounded-2xl border border-red-400/25 bg-red-400/10 px-4 py-3 text-sm text-red-100">We could not complete sign-in. Please try again.</div> : null}
+        {googleError ? <div className="rounded-2xl border border-red-400/25 bg-red-400/10 px-4 py-3 text-sm text-red-100">{googleErrors[googleError] ?? 'We could not complete sign-in. Please try again.'}</div> : null}
 
-        <a href="/api/portal/oauth/google?redirect_to=/portal/overview" className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100">
+        <a href={googleHref} className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100">
           <span>Continue with Google</span>
         </a>
 
