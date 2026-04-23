@@ -2,12 +2,13 @@
 export const runtime = 'edge';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { FormEvent, useMemo, useState } from 'react';
 import { AuthShell } from '@/components/portal/auth-shell';
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({
     fullName: '',
     email: '',
@@ -18,6 +19,11 @@ export default function SignupPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const nextPath = useMemo(() => {
+    const next = searchParams.get('next');
+    return next && next.startsWith('/') ? next : '/portal/overview';
+  }, [searchParams]);
 
   const updateField = (field: keyof typeof form, value: string) => setForm((current) => ({ ...current, [field]: value }));
 
@@ -47,7 +53,7 @@ export default function SignupPage() {
         return;
       }
 
-      router.push(`/verify-email?email=${encodeURIComponent(form.email)}`);
+      router.push(`/verify-email?email=${encodeURIComponent(form.email)}${nextPath !== '/portal/overview' ? `&next=${encodeURIComponent(nextPath)}` : ''}`);
     } catch {
       setError('Unable to reach the portal right now. Please retry in a moment.');
     } finally {
@@ -60,7 +66,7 @@ export default function SignupPage() {
       eyebrow="New workspace"
       title="Create a polished FilterCalls portal account"
       subtitle="Set up your secure account, verify your email, and unlock API management with a smoother onboarding flow."
-      footer={<div className="flex items-center justify-between gap-3"><span>Already have an account?</span><Link href="/login" className="font-medium text-sky-300 hover:text-sky-200">Log in</Link></div>}
+      footer={<div className="flex items-center justify-between gap-3"><span>Already have an account?</span><Link href={`/login${nextPath !== '/portal/overview' ? `?next=${encodeURIComponent(nextPath)}` : ''}`} className="font-medium text-sky-300 hover:text-sky-200">Log in</Link></div>}
     >
       <div className="space-y-5">
         <div>
@@ -68,7 +74,7 @@ export default function SignupPage() {
           <p className="mt-2 text-sm leading-6 text-slate-300">Use Google for instant access, or fill in your details to create a verified account.</p>
         </div>
 
-        <a href="/api/portal/oauth/google?redirect_to=/portal/overview" className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100">
+        <a href={`/api/portal/oauth/google?redirect_to=${encodeURIComponent(nextPath)}`} className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100">
           <span>Sign up with Google</span>
         </a>
 
