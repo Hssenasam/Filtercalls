@@ -303,7 +303,8 @@ export const createEmailVerification = async (db: D1DatabaseLike, userId: string
   const tokenHash = await hashToken(token);
   const now = Math.floor(Date.now() / 1000);
   const expires = now + EMAIL_VERIFICATION_TTL_SECONDS;
-  await db.prepare('INSERT OR REPLACE INTO email_verifications (token_hash, user_id, email, expires_at, used_at, created_at) VALUES (?, ?, ?, ?, NULL, ?)').bind(tokenHash, userId, normalizeEmail(email), expires, now).run();
+  await db.prepare('DELETE FROM email_verifications WHERE user_id = ?').bind(userId).run();
+  await db.prepare('INSERT INTO email_verifications (token_hash, user_id, email, expires_at, used_at, created_at) VALUES (?, ?, ?, ?, NULL, ?)').bind(tokenHash, userId, normalizeEmail(email), expires, now).run();
   return { token, expires_at: expires, verify_url: `${getPortalBaseUrl()}/verify-email?token=${encodeURIComponent(token)}` };
 };
 
