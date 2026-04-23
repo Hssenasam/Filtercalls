@@ -115,7 +115,7 @@ const normalizePhone = (rawInput: string, selectedCountryIso?: string): ParseRes
   };
 };
 
-const signalJitter = (base: number, id: string, normalized: string) => clamp(base + boundedJitter(`${id}:${normalized}`, -1, 1), 0, 10);
+const signalJitter = (base: number, _id: string, _normalized: string) => clamp(base, 0, 10);
 
 export const extractSignals = (normalizedNumber: string, detectedCountry: string): PhoneSignals => {
   const digits = digitsOnly(normalizedNumber);
@@ -229,8 +229,8 @@ export const runFallbackIntentEngine = (inputNumber: string, options?: EngineOpt
   const signals = extractSignals(parsed.normalizedNumber, detectedIso);
 
   const nonLinearBase = fnv1a32(`${parsed.normalizedNumber}|${parsed.parsePath}|${parsed.detectedCountryIso ?? 'XX'}`);
-  const boundedRiskJitter = boundedJitter(`${parsed.normalizedNumber}:risk`, -6, 6);
-  const boundedTrustJitter = boundedJitter(`${parsed.normalizedNumber}:trust`, -7, 7);
+  const boundedRiskJitter = 0;
+  const boundedTrustJitter = 0;
 
   const riskRaw =
     10 +
