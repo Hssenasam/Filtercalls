@@ -41,6 +41,7 @@ const fromB64url = (text: string) => {
 };
 const utf8 = (v: string) => new TextEncoder().encode(v);
 const warnedFallbackSecrets = new Set<string>();
+let ensuredSchema = false;
 
 const getSecret = (name: 'SESSION_SECRET' | 'CSRF_SECRET') => {
   const globalRef = globalThis as unknown as {
@@ -60,6 +61,50 @@ const getSecret = (name: 'SESSION_SECRET' | 'CSRF_SECRET') => {
     globalRef.__ENV__?.[name] ??
     ''
   );
+};
+
+export const getGoogleClientId = () => process.env.GOOGLE_CLIENT_ID ?? '';
+export const getGoogleClientSecret = () => process.env.GOOGLE_CLIENT_SECRET ?? '';
+
+const isIgnorableSchemaError = (error: unknown) => {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return message.includes('duplicate column') || message.includes('already exists');
+};
+
+const runStatement = async (db: D1DatabaseLike, sql: string) => {
+  await db.prepare(sql).bind().run();
+};
+
+export const ensurePortalAuthSchema = async (db: D1DatabaseLike) => {
+  if (ensuredSchema) return;
+
+  await runStatement(db, 'CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, email_verified_at INTEGER, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, disabled_at INTEGER)');
+  await runStatement(db, 'CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL, user_agent TEXT, ip TEXT)');
+  await runStatement(db, 'CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)');
+  await runStatement(db, 'CREATE TABLE IF NOT EXISTS password_resets (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL, used_at INTEGER)');
+  await runStatement(db, 'CREATE TABLE IF NOT EXISTS email_verifications (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, email TEXT NOT NULL, expires_at INTEGER NOT NULL, used_at INTEGER, created_at INTEGER NOT NULL)');
+  await runStatement(db, 'CREATE INDEX IF NOT EXISTS idx_email_verifications_user ON email_verifications(user_id)');
+
+  const alterStatements = [
+    'ALTER TABLE users ADD COLUMN full_name TEXT',
+    'ALTER TABLE users ADD COLUMN phone TEXT',
+    'ALTER TABLE users ADD COLUMN phone_normalized TEXT',
+    'ALTER TABLE users ADD COLUMN auth_provider TEXT',
+    'ALTER TABLE users ADD COLUMN google_sub TEXT',
+    'ALTER TABLE users ADD COLUMN last_login_at INTEGER'
+  ];
+
+  for (const statement of alterStatements) {
+    try {
+      await runStatement(db, statement);
+    } catch (error) {
+      if (!isIgnorableSchemaError(error)) throw error;
+    }
+  }
+
+  await runStatement(db, 'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone_normalized ON users(phone_normalized)');
+  await runStatement(db, 'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub)');
+  ensuredSchema = true;
 };
 
 const sign = async (secret: string, payload: string) => {
@@ -141,6 +186,7 @@ export const createSession = async (db: D1DatabaseLike, userId: string, ip: stri
   const id = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);
   const exp = now + SESSION_TTL_SECONDS;
+  await ensurePortalAuthSchema(db);
   try {
     await db.prepare('INSERT INTO sessions (id, user_id, created_at, expires_at, last_seen_at, user_agent, ip) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(id, userId, now, exp, now, userAgent, ip).run();
   } catch (error) {
@@ -172,6 +218,7 @@ export const requireCsrf = async (request: NextRequest) => {
 };
 
 export const getSessionUser = async (db: D1DatabaseLike, request: NextRequest): Promise<UserRow | null> => {
+  await ensurePortalAuthSchema(db);
   const token = request.cookies.get(SESSION_COOKIE)?.value ?? request.cookies.get('__Host-fc_session')?.value;
   if (!token) return null;
 
@@ -215,10 +262,13 @@ export const getPortalBaseUrl = () => process.env.PORTAL_BASE_URL ?? 'http://loc
 
 export const getGoogleRedirectUri = () => `${getPortalBaseUrl()}/api/portal/oauth/google/callback`;
 
-export const findUserByEmail = async (db: D1DatabaseLike, email: string) =>
-  mapUserRow(await db.prepare('SELECT id, email, password_hash, email_verified_at, disabled_at, full_name, phone, phone_normalized, auth_provider, google_sub, last_login_at FROM users WHERE email = ? LIMIT 1').bind(normalizeEmail(email)).first<Record<string, unknown>>());
+export const findUserByEmail = async (db: D1DatabaseLike, email: string) => {
+  await ensurePortalAuthSchema(db);
+  return mapUserRow(await db.prepare('SELECT id, email, password_hash, email_verified_at, disabled_at, full_name, phone, phone_normalized, auth_provider, google_sub, last_login_at FROM users WHERE email = ? LIMIT 1').bind(normalizeEmail(email)).first<Record<string, unknown>>());
+};
 
 export const findUserByPhone = async (db: D1DatabaseLike, phone: string) => {
+  await ensurePortalAuthSchema(db);
   const normalized = normalizePhone(phone);
   if (!normalized) return null;
   return mapUserRow(await db.prepare('SELECT id, email, password_hash, email_verified_at, disabled_at, full_name, phone, phone_normalized, auth_provider, google_sub, last_login_at FROM users WHERE phone_normalized = ? LIMIT 1').bind(normalized).first<Record<string, unknown>>());
@@ -228,7 +278,13 @@ export const findUserByIdentifier = async (db: D1DatabaseLike, identifier: strin
   return isEmailIdentifier(identifier) ? findUserByEmail(db, identifier) : findUserByPhone(db, identifier);
 };
 
+export const findUserByGoogleSub = async (db: D1DatabaseLike, googleSub: string) => {
+  await ensurePortalAuthSchema(db);
+  return mapUserRow(await db.prepare('SELECT id, email, password_hash, email_verified_at, disabled_at, full_name, phone, phone_normalized, auth_provider, google_sub, last_login_at FROM users WHERE google_sub = ? LIMIT 1').bind(googleSub).first<Record<string, unknown>>());
+};
+
 export const touchLastLogin = async (db: D1DatabaseLike, userId: string) => {
+  await ensurePortalAuthSchema(db);
   const now = Math.floor(Date.now() / 1000);
   await db.prepare('UPDATE users SET last_login_at = ?, updated_at = ? WHERE id = ?').bind(now, now, userId).run();
 };
@@ -242,6 +298,7 @@ export const hashToken = (token: string) => sha256(token);
 export const getServerCookie = async (name: string) => (await cookies()).get(name)?.value;
 
 export const createEmailVerification = async (db: D1DatabaseLike, userId: string, email: string) => {
+  await ensurePortalAuthSchema(db);
   const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
   const tokenHash = await hashToken(token);
   const now = Math.floor(Date.now() / 1000);
@@ -251,6 +308,7 @@ export const createEmailVerification = async (db: D1DatabaseLike, userId: string
 };
 
 export const consumeEmailVerification = async (db: D1DatabaseLike, token: string) => {
+  await ensurePortalAuthSchema(db);
   const tokenHash = await hashToken(token);
   const now = Math.floor(Date.now() / 1000);
   const row = await db.prepare('SELECT token_hash, user_id, email, expires_at, used_at FROM email_verifications WHERE token_hash = ? LIMIT 1').bind(tokenHash).first<{ token_hash: string; user_id: string; email: string; expires_at: number; used_at: number | null }>();
