@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { COUNTRIES, DIAL_TO_COUNTRY, SORTED_DIAL_CODES } from '@/lib/countries';
 import { CountryCombobox } from '@/components/CountryCombobox';
 import { cn } from '@/lib/utils';
@@ -86,6 +86,13 @@ export const PhoneInput = ({
   const selectedCountry = useMemo(() => {
     return countryByIso.get(countryIso) ?? countryByIso.get('US') ?? uniqueCountries[0];
   }, [countryIso]);
+
+  useEffect(() => {
+    const detectedCountry = detectCountryFromInput(value);
+    if (detectedCountry && detectedCountry.iso !== countryIso) {
+      onCountryChange(detectedCountry.iso);
+    }
+  }, [value, countryIso, onCountryChange]);
 
   const handleSelectCountry = (nextIso: string) => {
     const nextCountry = countryByIso.get(nextIso);
