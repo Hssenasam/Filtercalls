@@ -9,6 +9,7 @@ export type IntentCategory =
   | 'Delivery / Logistics'
   | 'Recruiter / Hiring'
   | 'Financial / Collections'
+  | 'Invalid / Unverified Number'
   | 'Unknown but Low-Risk'
   | 'Likely Safe Personal/Business';
 
@@ -17,7 +18,20 @@ export type RecommendedAction =
   | 'Silence'
   | 'Send to Voicemail'
   | 'Answer with Caution'
+  | 'Verify Before Answering'
   | 'Safe to Answer';
+
+export type VerificationProvider = 'internal' | 'apilayer';
+export type VerificationStatus = 'verified' | 'not_verified' | 'unavailable';
+
+export interface PhoneVerification {
+  provider: VerificationProvider;
+  status: VerificationStatus;
+  label: string;
+  valid?: boolean;
+  confidence_note: string;
+  raw_provider?: string;
+}
 
 export interface CallSignal {
   id: string;
@@ -36,6 +50,8 @@ export interface CallIntentAnalysis {
   carrier: string;
   line_type: 'mobile' | 'landline' | 'voip' | 'unknown';
   is_valid?: boolean;
+  data_source: 'internal_engine' | 'apilayer_number_verification';
+  verification: PhoneVerification;
   risk_score: number;
   trust_score: number;
   nuisance_level: NuisanceLevel;
