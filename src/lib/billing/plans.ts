@@ -28,7 +28,7 @@ export const PLAN_DEFINITIONS: Record<PlanId, PlanDefinition> = {
   pro: {
     id: 'pro',
     label: 'Pro',
-    monthlyPriceUsd: 49,
+    monthlyPriceUsd: 29,
     limits: {
       monthlyAnalyses: 1000,
       apiKeys: 5,
