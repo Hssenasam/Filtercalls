@@ -1,24 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { LoaderCircle, PhoneCall } from 'lucide-react';
+import { AlertCircle, CheckCircle2, LoaderCircle, PhoneCall } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AnalysisResultCard } from '@/components/analysis/analysis-result-card';
 import { PhoneInput, detectDefaultCountryFromLocale } from '@/components/PhoneInput';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CallIntentAnalysis } from '@/lib/engine/types';
+import { validatePhoneNumberInput } from '@/lib/phone';
 
 type NumberAnalyzerProps = {
   compact?: boolean;
   initialNumber?: string;
   autoRun?: boolean;
-};
-
-const isLikelyValidPhoneNumber = (value: string) => {
-  const digits = value.replace(/\D/g, '');
-  return digits.length >= 7 && digits.length <= 15;
 };
 
 export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = true }: NumberAnalyzerProps) => {
@@ -41,18 +37,14 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
     autoRunHandledRef.current = false;
   }, [initialNumber]);
 
+  const validation = useMemo(() => validatePhoneNumberInput(number, country), [number, country]);
+
   const runAnalysis = useCallback(async (overrideNumber?: string) => {
-    const targetNumber = (overrideNumber ?? number).trim();
+    const validationTarget = validatePhoneNumberInput(overrideNumber ?? number, country);
 
-    if (!targetNumber) {
+    if (validationTarget.state !== 'valid') {
       setResult(null);
-      setError('Enter a number above to generate a report.');
-      return;
-    }
-
-    if (!isLikelyValidPhoneNumber(targetNumber)) {
-      setResult(null);
-      setError('Use international format: +1 202 555 0100');
+      setError(validationTarget.message ?? 'Enter a complete phone number before analyzing.');
       return;
     }
 
@@ -63,26 +55,26 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ number: targetNumber, country })
+        body: JSON.stringify({ number: validationTarget.canonicalNumber, country: validationTarget.inferredCountryIso ?? country })
       });
 
       const payload = await response.json().catch(() => null);
       if (response.status === 401) {
-        router.push(`/login?next=${encodeURIComponent(`/analysis?number=${targetNumber}`)}`);
+        router.push(`/login?next=${encodeURIComponent(`/analysis?number=${validationTarget.canonicalNumber}`)}`);
         return;
       }
       if (response.status === 402) {
         throw new Error(payload?.error?.message ?? 'Monthly analysis limit reached for your account.');
       }
       if (!response.ok) {
-        throw new Error('analysis_failed');
+        throw new Error(payload?.error?.message ?? 'We could not process this number right now.');
       }
 
       setResult(payload as CallIntentAnalysis);
-      setNumber(targetNumber);
+      setNumber(validationTarget.canonicalNumber);
     } catch (err) {
       setResult(null);
-      setError(err instanceof Error && err.message !== 'analysis_failed' ? err.message : 'We could not process this number right now. Please try again in a few seconds.');
+      setError(err instanceof Error ? err.message : 'We could not process this number right now. Please try again in a few seconds.');
     } finally {
       setLoading(false);
     }
@@ -95,9 +87,16 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
       return;
     }
 
+    const incomingValidation = validatePhoneNumberInput(incomingNumber, country);
+    if (incomingValidation.state !== 'valid') {
+      setError(incomingValidation.message);
+      autoRunHandledRef.current = true;
+      return;
+    }
+
     autoRunHandledRef.current = true;
     void runAnalysis(incomingNumber);
-  }, [autoRun, initialNumber, runAnalysis]);
+  }, [autoRun, country, initialNumber, runAnalysis]);
 
   const handleNumberChange = (value: string) => {
     setNumber(value);
@@ -108,7 +107,19 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
   const handleCountryChange = (iso: string) => {
     setCountry(iso);
     if (error) setError(null);
+    if (result) setResult(null);
   };
+
+  const statusBadge =
+    validation.state === 'valid' ? (
+      <span className="inline-flex w-fit items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-200">
+        <CheckCircle2 className="h-3.5 w-3.5" /> Ready
+      </span>
+    ) : validation.state === 'empty' ? null : (
+      <span className="inline-flex w-fit items-center gap-1 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-200">
+        <AlertCircle className="h-3.5 w-3.5" /> {validation.state === 'incomplete' ? 'Incomplete' : 'Needs fixing'}
+      </span>
+    );
 
   return (
     <div className="space-y-6">
@@ -119,17 +130,20 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
               <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/35">Lookup</p>
               <h2 className="text-lg font-semibold text-white">{compact ? 'Run another analysis' : 'Analyze a phone number'}</h2>
             </div>
-            {initialNumber ? <span className="inline-flex w-fit items-center rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-200">Prefilled from homepage</span> : null}
+            <div className="flex flex-wrap gap-2">
+              {initialNumber ? <span className="inline-flex w-fit items-center rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-200">Prefilled from homepage</span> : null}
+              {statusBadge}
+            </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-start">
             <PhoneInput value={number} countryIso={country} onValueChange={handleNumberChange} onCountryChange={handleCountryChange} placeholder="+1 202 555 0100" />
-            <Button className="h-11 w-full md:w-auto" onClick={() => void runAnalysis()} disabled={loading}>
+            <Button className="h-11 w-full md:w-auto" onClick={() => void runAnalysis()} disabled={loading || validation.state !== 'valid'}>
               {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : 'Analyze now'}
             </Button>
           </div>
 
-          {initialNumber && !loading && !result && !error ? <p className="text-sm text-white/45">Loaded <span className="font-mono text-white/70">{initialNumber}</span> from the homepage.{autoRun ? ' Your report starts automatically.' : ' You can analyze it without retyping.'}</p> : null}
+          {initialNumber && !loading && !result && !error ? <p className="text-sm text-white/45">Loaded <span className="font-mono text-white/70">{initialNumber}</span> from the homepage.{autoRun ? ' Your report starts automatically when the number is complete.' : ' You can analyze it without retyping.'}</p> : null}
           {error ? <p className="text-sm text-amber-300/90">{error}</p> : null}
         </div>
       </Card>
@@ -160,8 +174,8 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
             <div className="flex flex-col items-start gap-4 text-left sm:flex-row sm:items-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05]"><PhoneCall className="h-5 w-5 text-white/45" /></div>
               <div className="space-y-1">
-                <p className="text-base font-medium text-white">Enter a number above to generate a report.</p>
-                <p className="text-sm text-white/45">We will return trust scoring, risk signals, and recommended action in one workspace.</p>
+                <p className="text-base font-medium text-white">{validation.state === 'valid' ? 'Your number is ready to analyze.' : 'Enter a complete number above to generate a report.'}</p>
+                <p className="text-sm text-white/45">{validation.state === 'valid' ? 'Run the analysis to get trust scoring, risk signals, and a recommended action.' : 'We now block incomplete or implausible numbers before running a report.'}</p>
               </div>
             </div>
           </Card>
