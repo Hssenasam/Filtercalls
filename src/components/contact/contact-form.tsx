@@ -9,7 +9,7 @@ const FORMSPREE_ENDPOINT = 'https://formspree.io/f/xzdypggv';
 
 const inquiryTypes = [
   ['general', 'General question'],
-  ['custom-plan', 'Custom plan / pricing'],
+  ['support', 'Support'],
   ['business', 'Business / team use'],
   ['api', 'API access'],
   ['partnership', 'Partnership']
@@ -78,7 +78,7 @@ export const ContactForm = ({ defaultType = 'general', compact = false, onSucces
         name="message"
         required
         maxLength={1200}
-        placeholder="Tell us what you need. For custom plans, include estimated monthly analysis volume and use case."
+        placeholder="Tell us what you need. For custom pricing, use the dedicated custom plan request form on the pricing page."
         className="min-h-28 w-full rounded-xl border border-white/20 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-violet-400/60"
       />
 
