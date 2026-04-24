@@ -42,6 +42,7 @@ class ApiLayerProvider implements PhoneIntelligenceProvider {
       return runFallbackIntentEngine(number, {
         requestedCountry: country,
         external: {
+          provider: 'apilayer',
           country: payload.country_name,
           region: payload.location,
           carrier: payload.carrier,
@@ -50,7 +51,8 @@ class ApiLayerProvider implements PhoneIntelligenceProvider {
           isValid: payload.valid
         }
       });
-    } catch {
+    } catch (error) {
+      console.warn('[phone-provider] APILayer lookup failed; falling back to internal engine', error instanceof Error ? error.message : String(error));
       return runFallbackIntentEngine(number, { requestedCountry: country });
     }
   }
