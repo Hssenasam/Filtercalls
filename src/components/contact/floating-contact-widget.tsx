@@ -9,10 +9,10 @@ export const FloatingContactWidget = () => {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 print:hidden">
+    <div className="pointer-events-none fixed bottom-5 right-5 z-50 print:hidden">
       <div
         className={cn(
-          'mb-4 w-[calc(100vw-2.5rem)] max-w-sm overflow-hidden rounded-3xl border border-white/12 bg-slate-950/95 shadow-2xl shadow-black/40 backdrop-blur-xl transition-all duration-300',
+          'pointer-events-auto mb-4 w-[calc(100vw-2.5rem)] max-w-sm overflow-hidden rounded-3xl border border-white/12 bg-slate-950/95 shadow-2xl shadow-black/40 backdrop-blur-xl transition-all duration-300',
           open ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-4 opacity-0'
         )}
       >
@@ -38,7 +38,7 @@ export const FloatingContactWidget = () => {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="group flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-300/25 bg-gradient-to-br from-violet-600 to-cyan-500 text-white shadow-xl shadow-violet-950/40 transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-violet-300/50"
+        className="pointer-events-auto group flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-300/25 bg-gradient-to-br from-violet-600 to-cyan-500 text-white shadow-xl shadow-violet-950/40 transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-violet-300/50"
         aria-label={open ? 'Close contact form' : 'Open contact form'}
       >
         {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6 transition group-hover:rotate-6" />}
