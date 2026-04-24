@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { HomeHero } from '@/components/sections/home-hero';
@@ -11,6 +12,11 @@ export default function HomePage() {
       <SiteHeader />
       <main className="flex flex-col gap-0">
         <HomeHero />
+        <div className="border-y border-white/10 bg-white/[0.02] px-6 py-3 text-center">
+          <Link href="/analysis" className="text-sm text-white/55 transition hover:text-violet-200">
+            Seen a suspicious number? →
+          </Link>
+        </div>
         <FeatureGrid />
         <HomeBlocks />
         <HomePricing />
