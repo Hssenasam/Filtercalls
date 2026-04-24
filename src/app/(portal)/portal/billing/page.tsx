@@ -3,6 +3,7 @@ export const runtime = 'edge';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { PLAN_DEFINITIONS } from '@/lib/billing/plans';
 
 type BillingResponse = {
   plan: string;
@@ -28,6 +29,7 @@ export default function PortalBillingPage() {
   const [contactState, setContactState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [form, setForm] = useState({ name: '', email: '', message: '' });
   const router = useRouter();
+  const proPlan = PLAN_DEFINITIONS.pro;
 
   useEffect(() => {
     fetch('/api/portal/billing', { cache: 'no-store' })
@@ -143,7 +145,7 @@ export default function PortalBillingPage() {
             <p className="text-sm font-medium text-white">Pro</p>
             <span className="rounded-full border border-sky-400/20 bg-sky-400/10 px-3 py-1 text-xs font-medium text-sky-200">Recommended</span>
           </div>
-          <p className="mt-3 text-4xl font-semibold text-white">$49</p>
+          <p className="mt-3 text-4xl font-semibold text-white">${proPlan.monthlyPriceUsd}</p>
           <p className="mt-1 text-sm text-slate-300">Per month for higher volume and stronger automation.</p>
           <ul className="mt-5 space-y-3 text-sm text-slate-200">
             <li>• 1,000 analyses / month</li>
