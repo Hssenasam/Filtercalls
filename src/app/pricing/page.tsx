@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CheckCircle2, HelpCircle, Sparkles } from 'lucide-react';
+import { CheckCircle2, HelpCircle, MessageCircle, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { PLAN_DEFINITIONS } from '@/lib/billing/plans';
 
@@ -18,6 +18,14 @@ const proFeatures = [
   '5 API keys',
   'Webhooks',
   'Priority support'
+];
+
+const customFeatures = [
+  'Higher monthly analysis volume',
+  'Custom API and webhook limits',
+  'Team or business onboarding',
+  'Dedicated workflow guidance',
+  'Custom billing discussion'
 ];
 
 const faqs = [
@@ -49,7 +57,7 @@ export default function PricingPage() {
         <p className="text-sm text-white/50">Start free, upgrade when you need deeper verification, more analyses, API keys, and workflow automation.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card className="space-y-5 border border-white/10 bg-white/[0.03]">
           <div>
             <p className="text-sm text-white/50">{free.label}</p>
@@ -74,8 +82,26 @@ export default function PricingPage() {
 
           <FeatureList features={proFeatures} />
 
-          <Link href="/login" className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-violet-950/30">
-            Get Pro
+          <Link href="/portal/billing" className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-violet-950/30">
+            Upgrade in portal
+          </Link>
+        </Card>
+
+        <Card className="space-y-5 border border-cyan-400/20 bg-cyan-400/[0.04]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm text-cyan-200/75">Custom</p>
+              <p className="mt-1 text-3xl font-semibold text-white">Let&apos;s talk</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-200">
+              <MessageCircle className="h-5 w-5" />
+            </div>
+          </div>
+
+          <FeatureList features={customFeatures} />
+
+          <Link href="/contact?topic=custom-plan" className="inline-flex w-full items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100 hover:bg-cyan-300/15">
+            Request custom plan
           </Link>
         </Card>
       </div>
