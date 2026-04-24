@@ -1,14 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Search, ArrowRight, Shield, Globe, Zap, Lock } from 'lucide-react';
-
-type PortalMe = {
-  id: string;
-  plan?: { usage?: { analyses_remaining?: number } };
-};
+import { Search, ArrowRight, Shield, Globe, Zap, Sparkles } from 'lucide-react';
 
 const CHIPS = [
   { label: '+1 202 555 0100', hint: 'US' },
@@ -31,31 +26,6 @@ export function HomeHero() {
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<PortalMe | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/portal/me', { cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) {
-          if (!cancelled) setAuthChecked(true);
-          return;
-        }
-        const payload = (await response.json()) as PortalMe;
-        if (!cancelled) {
-          setUser(payload);
-          setAuthChecked(true);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setAuthChecked(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const validate = (v: string) => {
     if (!v.trim()) return 'Enter a phone number to continue.';
@@ -66,17 +36,16 @@ export function HomeHero() {
   };
 
   const handleSubmit = () => {
-    const err = validate(value);
-    if (err) { setError(err); inputRef.current?.focus(); return; }
-    setError('');
-
-    if (!user) {
-      router.push(`/login?next=${encodeURIComponent(`/analysis?number=${value.trim()}`)}`);
+    const trimmed = value.trim();
+    const err = validate(trimmed);
+    if (err) {
+      setError(err);
+      inputRef.current?.focus();
       return;
     }
-
+    setError('');
     setLoading(true);
-    router.push(`/analysis?number=${encodeURIComponent(value.trim())}`);
+    router.push(`/analysis?number=${encodeURIComponent(trimmed)}`);
   };
 
   const handleKey = (e: React.KeyboardEvent) => {
@@ -111,12 +80,12 @@ export function HomeHero() {
             <div className="absolute top-0 inset-x-8 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full" />
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-left">
               <div>
-                <p className="text-sm font-medium text-white">Secure trial workspace</p>
-                <p className="text-xs text-white/45">You must sign in before running analysis. Signed-in users see remaining attempts in the portal.</p>
+                <p className="text-sm font-medium text-white">Free caller report</p>
+                <p className="text-xs text-white/45">Guests can run one full report. Create a free account to unlock 20 monthly analyses.</p>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs text-white/65">
-                <Lock className="h-3.5 w-3.5" />
-                {authChecked ? (user ? `${user.plan?.usage?.analyses_remaining ?? 0} analyses left` : 'Login required') : 'Checking account...'}
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200">
+                <Sparkles className="h-3.5 w-3.5" />
+                1 guest report included
               </div>
             </div>
 
@@ -127,7 +96,7 @@ export function HomeHero() {
               </div>
               <div className="px-2 py-2 sm:py-0 sm:flex sm:items-center">
                 <button onClick={handleSubmit} disabled={loading} className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-sm font-medium shadow-lg shadow-violet-500/25 hover:shadow-violet-500/35 transition-all duration-200 active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed">
-                  {loading ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Opening workspace...</> : <>{user ? 'Analyze now' : 'Sign in to analyze'}<ArrowRight className="w-4 h-4" /></>}
+                  {loading ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Opening report...</> : <>Analyze free<ArrowRight className="w-4 h-4" /></>}
                 </button>
               </div>
             </div>
