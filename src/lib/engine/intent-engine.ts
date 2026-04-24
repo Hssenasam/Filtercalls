@@ -3,6 +3,7 @@ import { COUNTRIES, COUNTRY_BY_ISO, DIAL_TO_COUNTRY, SORTED_DIAL_CODES } from '@
 import { CallIntentAnalysis, CallSignal, IntentCategory, RecommendedAction } from '@/lib/engine/types';
 
 type ExternalHints = {
+  provider?: 'apilayer';
   country?: string;
   region?: string;
   carrier?: string;
@@ -162,7 +163,8 @@ const nuisanceFromRisk = (riskScore: number): CallIntentAnalysis['nuisance_level
   return 'low';
 };
 
-const classifyIntent = (risk: number, trust: number, signals: PhoneSignals): IntentCategory => {
+const classifyIntent = (risk: number, trust: number, signals: PhoneSignals, isVerifiedInvalid: boolean): IntentCategory => {
+  if (isVerifiedInvalid) return 'Invalid / Unverified Number';
   if (risk >= 85 || (signals.structuralAnomalyScore >= 8 && signals.massRoutingScore >= 7)) return 'Scam / Fraud Risk';
   if (risk >= 72 || signals.repetitionScore >= 8) return 'Spam / Robocall';
   if (risk >= 62 && signals.prefixFamilyRisk >= 6) return 'Aggressive Sales Outreach';
@@ -176,6 +178,7 @@ const classifyIntent = (risk: number, trust: number, signals: PhoneSignals): Int
 };
 
 const actionFor = (intent: IntentCategory, risk: number, nuisance: CallIntentAnalysis['nuisance_level'], trust: number): RecommendedAction => {
+  if (intent === 'Invalid / Unverified Number') return 'Verify Before Answering';
   if (intent === 'Scam / Fraud Risk') return 'Block';
   if (risk >= 88) return 'Block';
   if (nuisance === 'critical' && trust < 70) return 'Silence';
@@ -227,6 +230,8 @@ export const runFallbackIntentEngine = (inputNumber: string, options?: EngineOpt
 
   const detectedIso = parsed.detectedCountryIso ?? options?.requestedCountry ?? 'US';
   const signals = extractSignals(parsed.normalizedNumber, detectedIso);
+  const hasExternalVerification = options?.external?.provider === 'apilayer';
+  const isVerifiedInvalid = hasExternalVerification && options?.external?.isValid === false;
 
   const nonLinearBase = fnv1a32(`${parsed.normalizedNumber}|${parsed.parsePath}|${parsed.detectedCountryIso ?? 'XX'}`);
   const boundedRiskJitter = 0;
@@ -244,7 +249,7 @@ export const runFallbackIntentEngine = (inputNumber: string, options?: EngineOpt
     (nonLinearBase % 17) * 0.9 +
     boundedRiskJitter;
 
-  const risk_score = clamp(Math.round(riskRaw / 1.7), 0, 100);
+  const baseRiskScore = clamp(Math.round(riskRaw / 1.7), 0, 100);
 
   const trustRaw =
     28 +
@@ -257,20 +262,28 @@ export const runFallbackIntentEngine = (inputNumber: string, options?: EngineOpt
     ((nonLinearBase >>> 3) % 19) * 0.6 +
     boundedTrustJitter;
 
-  const trust_score = clamp(Math.round(trustRaw / 1.8), 0, 100);
-  const confidence = clamp(
+  const baseTrustScore = clamp(Math.round(trustRaw / 1.8), 0, 100);
+  const risk_score = isVerifiedInvalid ? clamp(Math.max(baseRiskScore, 72), 0, 100) : baseRiskScore;
+  const trust_score = isVerifiedInvalid ? clamp(Math.min(baseTrustScore, 28), 0, 100) : baseTrustScore;
+
+  const internalConfidence = clamp(
     Math.round(
       38 +
-        signals.geoConsistencyScore * 3 +
-        signals.lengthValidityScore * 2.5 +
-        Math.abs(risk_score - trust_score) * 0.35 +
-        (parsed.explicitInternational ? 8 : 3)
+        signals.geoConsistencyScore * 2.2 +
+        signals.lengthValidityScore * 1.8 +
+        Math.abs(risk_score - trust_score) * 0.25 +
+        (parsed.explicitInternational ? 6 : 2)
     ),
-    35,
-    98
+    40,
+    78
   );
+  const confidence = isVerifiedInvalid
+    ? 92
+    : hasExternalVerification
+      ? clamp(Math.max(internalConfidence, 84), 0, 96)
+      : internalConfidence;
 
-  const probable_intent = classifyIntent(risk_score, trust_score, signals);
+  const probable_intent = classifyIntent(risk_score, trust_score, signals, isVerifiedInvalid);
   const nuisance_level = nuisanceFromRisk(risk_score);
   const recommended_action = actionFor(probable_intent, risk_score, nuisance_level, trust_score);
 
@@ -281,10 +294,16 @@ export const runFallbackIntentEngine = (inputNumber: string, options?: EngineOpt
       : parsed.parsePath === 'selected_country_hint'
         ? `The number did not include an explicit international prefix, so ${parsed.detectedCountryName} was used as a country hint.`
         : `No explicit country signal was present, so heuristic parsing was applied with ${parsed.detectedCountryName} context.`;
+  const verificationReason = hasExternalVerification
+    ? isVerifiedInvalid
+      ? ' APILayer could not verify this as a valid phone number, so trust was reduced and the recommendation was made more cautious.'
+      : ' APILayer verification enriched the report with external phone metadata.'
+    : ' No external phone verification provider was available, so confidence is capped to reflect an internal-engine-only result.';
 
-  const explanation = `${parseReason} The strongest contributors were ${topContributors}. Risk and trust were scored independently (risk ${risk_score}/100, trust ${trust_score}/100), leading to the recommended action: ${recommended_action.toLowerCase()}.`;
+  const explanation = `${parseReason}${verificationReason} The strongest contributors were ${topContributors}. Risk and trust were scored independently (risk ${risk_score}/100, trust ${trust_score}/100), leading to the recommended action: ${recommended_action.toLowerCase()}.`;
 
   const line_type = lineTypeFromSignals(signals, parsed, options?.external?.lineType);
+  const data_source: CallIntentAnalysis['data_source'] = hasExternalVerification ? 'apilayer_number_verification' : 'internal_engine';
 
   return {
     input_number: inputNumber,
@@ -292,9 +311,21 @@ export const runFallbackIntentEngine = (inputNumber: string, options?: EngineOpt
     formatted_number: options?.external?.formattedNumber ?? parsed.formattedNumber,
     country: options?.external?.country ?? parsed.detectedCountryName,
     region: options?.external?.region,
-    carrier: options?.external?.carrier ?? (line_type === 'voip' ? 'Twilio Voice' : 'Unknown Carrier'),
+    carrier: options?.external?.carrier ?? (line_type === 'voip' ? 'Virtual / VoIP pattern' : 'Unknown Carrier'),
     line_type,
     is_valid: options?.external?.isValid,
+    data_source,
+    verification: {
+      provider: hasExternalVerification ? 'apilayer' : 'internal',
+      status: hasExternalVerification ? (isVerifiedInvalid ? 'not_verified' : 'verified') : 'unavailable',
+      label: hasExternalVerification ? 'APILayer Number Verification' : 'Internal deterministic engine',
+      valid: options?.external?.isValid,
+      confidence_note: hasExternalVerification
+        ? isVerifiedInvalid
+          ? 'External provider marked this number as not valid. Treat the result as a warning, not a safe caller identity.'
+          : 'External provider returned phone metadata and the report was enriched with it.'
+        : 'No external provider result was available. Scores are based on structural and country-code heuristics only.'
+    },
     risk_score,
     trust_score,
     nuisance_level,
