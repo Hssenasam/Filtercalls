@@ -40,6 +40,15 @@ type ParseResult = {
   explicitInternational: boolean;
 };
 
+type CalibrationSignals = {
+  repeatedRun: boolean;
+  sequentialRun: boolean;
+  allSameRun: boolean;
+  placeholderLike: boolean;
+  lengthBand: 'plausible' | 'borderline' | 'implausible';
+  carrierKnown: boolean;
+};
+
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const digitsOnly = (value: string) => value.replace(/\D/g, '');
 
@@ -104,7 +113,7 @@ const normalizePhone = (rawInput: string, selectedCountryIso?: string): ParseRes
   const nationalDigits = detected ? normalizedDigits.slice(detected.dial.length) : normalizedDigits;
 
   return {
-    rawInput: rawInput,
+    rawInput,
     normalizedNumber: normalized,
     formattedNumber: formatDisplay(normalized, detectedCountry?.iso),
     nationalDigits,
@@ -116,7 +125,42 @@ const normalizePhone = (rawInput: string, selectedCountryIso?: string): ParseRes
   };
 };
 
-const signalJitter = (base: number, _id: string, _normalized: string) => clamp(base, 0, 10);
+const signalJitter = (base: number) => clamp(base, 0, 10);
+
+const countryLengthBand = (nationalDigits: string, iso?: string): CalibrationSignals['lengthBand'] => {
+  const exactLengths: Record<string, number[]> = {
+    US: [10], CA: [10], DZ: [9], GB: [10], FR: [9], DE: [10, 11], MA: [9], TN: [8], EG: [10], SA: [9], AE: [9]
+  };
+  const expected = iso ? exactLengths[iso.toUpperCase()] : undefined;
+  if (!expected) return nationalDigits.length >= 7 && nationalDigits.length <= 12 ? 'plausible' : 'borderline';
+  if (expected.includes(nationalDigits.length)) return 'plausible';
+  if (expected.some((length) => Math.abs(length - nationalDigits.length) === 1)) return 'borderline';
+  return 'implausible';
+};
+
+const hasSequentialRun = (digits: string) => {
+  for (let index = 0; index <= digits.length - 4; index += 1) {
+    const chunk = digits.slice(index, index + 4);
+    const asc = chunk.split('').every((digit, idx, arr) => idx === 0 || Number(digit) === Number(arr[idx - 1]) + 1);
+    const desc = chunk.split('').every((digit, idx, arr) => idx === 0 || Number(digit) === Number(arr[idx - 1]) - 1);
+    if (asc || desc) return true;
+  }
+  return false;
+};
+
+const getCalibrationSignals = (parsed: ParseResult, external?: ExternalHints): CalibrationSignals => {
+  const national = parsed.nationalDigits;
+  const carrier = external?.carrier?.trim().toLowerCase();
+  const carrierKnown = Boolean(carrier && carrier !== 'unknown' && carrier !== 'unknown carrier');
+  return {
+    repeatedRun: /(\d)\1{3,}/.test(national),
+    sequentialRun: hasSequentialRun(national),
+    allSameRun: /^(\d)\1{6,}$/.test(national),
+    placeholderLike: /(?:00000|11111|12345678|98765432)/.test(national),
+    lengthBand: countryLengthBand(national, parsed.detectedCountryIso ?? parsed.selectedCountryIso),
+    carrierKnown
+  };
+};
 
 export const extractSignals = (normalizedNumber: string, detectedCountry: string): PhoneSignals => {
   const digits = digitsOnly(normalizedNumber);
@@ -128,7 +172,7 @@ export const extractSignals = (normalizedNumber: string, detectedCountry: string
   const repeatedTriples = /(\d)\1\1/.test(national) || /(12){2,}|(34){2,}|(56){2,}/.test(national);
   const suspiciousStructure = /(0000|1111|1234|4321|9999|1212|1010)$/.test(national);
   const prefixRiskFamilies = /^(1900|900|976|800|888|666|555)/.test(national);
-  const sequentialRuns = /0123|1234|2345|3456|4567|5678|6789|9876|8765|7654/.test(national);
+  const sequentialRuns = hasSequentialRun(national);
   const massRouting = /(000|111|222|333|444|555|666|777|888|999)$/.test(national) || /(00){2,}/.test(national);
 
   const detected = COUNTRY_BY_ISO.get(detectedCountry.toUpperCase());
@@ -138,14 +182,14 @@ export const extractSignals = (normalizedNumber: string, detectedCountry: string
   const geoConsistencyScore = detected ? 8 : 4;
 
   return {
-    entropyScore: signalJitter(Math.round(entropy * 10), 'entropy', normalizedNumber),
-    repetitionScore: signalJitter(repeatedTriples ? 8 : 3, 'repetition', normalizedNumber),
-    structuralAnomalyScore: signalJitter(suspiciousStructure ? 9 : 3, 'structural', normalizedNumber),
-    prefixFamilyRisk: signalJitter(prefixRiskFamilies ? 8 : 4, 'prefixFamily', normalizedNumber),
-    geoConsistencyScore: signalJitter(geoConsistencyScore, 'geo', normalizedNumber),
-    lengthValidityScore: signalJitter(expectedLengthScore, 'length', normalizedNumber),
-    sequentialRunScore: signalJitter(sequentialRuns ? 8 : 3, 'sequential', normalizedNumber),
-    massRoutingScore: signalJitter(massRouting ? 8 : 4, 'massRouting', normalizedNumber)
+    entropyScore: signalJitter(Math.round(entropy * 10)),
+    repetitionScore: signalJitter(repeatedTriples ? 8 : 3),
+    structuralAnomalyScore: signalJitter(suspiciousStructure ? 9 : 3),
+    prefixFamilyRisk: signalJitter(prefixRiskFamilies ? 8 : 4),
+    geoConsistencyScore: signalJitter(geoConsistencyScore),
+    lengthValidityScore: signalJitter(expectedLengthScore),
+    sequentialRunScore: signalJitter(sequentialRuns ? 8 : 3),
+    massRoutingScore: signalJitter(massRouting ? 8 : 4)
   };
 };
 
@@ -232,10 +276,10 @@ export const runFallbackIntentEngine = (inputNumber: string, options?: EngineOpt
   const signals = extractSignals(parsed.normalizedNumber, detectedIso);
   const hasExternalVerification = options?.external?.provider === 'apilayer';
   const isVerifiedInvalid = hasExternalVerification && options?.external?.isValid === false;
+  const line_type = lineTypeFromSignals(signals, parsed, options?.external?.lineType);
+  const calibrationSignals = getCalibrationSignals(parsed, options?.external);
 
   const nonLinearBase = fnv1a32(`${parsed.normalizedNumber}|${parsed.parsePath}|${parsed.detectedCountryIso ?? 'XX'}`);
-  const boundedRiskJitter = 0;
-  const boundedTrustJitter = 0;
 
   const riskRaw =
     10 +
@@ -246,10 +290,7 @@ export const runFallbackIntentEngine = (inputNumber: string, options?: EngineOpt
     signals.sequentialRunScore * 2.1 +
     (10 - signals.lengthValidityScore) * 1.9 +
     (10 - signals.geoConsistencyScore) * 1.6 +
-    (nonLinearBase % 17) * 0.9 +
-    boundedRiskJitter;
-
-  const baseRiskScore = clamp(Math.round(riskRaw / 1.7), 0, 100);
+    (nonLinearBase % 17) * 0.9;
 
   const trustRaw =
     28 +
@@ -259,12 +300,76 @@ export const runFallbackIntentEngine = (inputNumber: string, options?: EngineOpt
     (10 - signals.structuralAnomalyScore) * 2.7 +
     (10 - signals.massRoutingScore) * 2.4 +
     (10 - signals.repetitionScore) * 2.0 +
-    ((nonLinearBase >>> 3) % 19) * 0.6 +
-    boundedTrustJitter;
+    ((nonLinearBase >>> 3) % 19) * 0.6;
 
-  const baseTrustScore = clamp(Math.round(trustRaw / 1.8), 0, 100);
-  const risk_score = isVerifiedInvalid ? clamp(Math.max(baseRiskScore, 72), 0, 100) : baseRiskScore;
-  const trust_score = isVerifiedInvalid ? clamp(Math.min(baseTrustScore, 28), 0, 100) : baseTrustScore;
+  // Phase 2.5 calibration: deterministic score differentiation
+  // Signals: APILayer validity, line_type, carrier, number patterns, length
+  // No Math.random() — same input always produces same output
+  let risk_score = clamp(Math.round(riskRaw / 1.7), 0, 100);
+  let trust_score = clamp(Math.round(trustRaw / 1.8), 0, 100);
+  let confidenceAdjustment = 0;
+
+  if (hasExternalVerification) {
+    if (options?.external?.isValid === false) {
+      risk_score += 26;
+      trust_score -= 32;
+      confidenceAdjustment += 14;
+    } else if (options?.external?.isValid === true) {
+      confidenceAdjustment += 12;
+      trust_score += calibrationSignals.carrierKnown ? 5 : 1;
+    }
+  } else {
+    confidenceAdjustment -= 8;
+    trust_score -= 6;
+  }
+
+  if (line_type === 'voip') {
+    risk_score += 8;
+    trust_score -= 5;
+  } else if (line_type === 'mobile' && calibrationSignals.carrierKnown) {
+    trust_score += 5;
+    confidenceAdjustment += 5;
+  } else if (line_type === 'landline' && options?.external?.isValid === true) {
+    confidenceAdjustment += 2;
+  } else if (line_type === 'unknown') {
+    confidenceAdjustment -= 8;
+    trust_score -= 5;
+  }
+
+  if (calibrationSignals.carrierKnown) {
+    confidenceAdjustment += 5;
+  } else {
+    confidenceAdjustment -= 10;
+    trust_score -= 8;
+  }
+
+  if (calibrationSignals.repeatedRun) risk_score += 12;
+  if (calibrationSignals.sequentialRun) risk_score += 10;
+  if (calibrationSignals.allSameRun) {
+    risk_score += 20;
+    trust_score -= 15;
+  }
+  if (calibrationSignals.placeholderLike) risk_score += 18;
+  if (calibrationSignals.lengthBand === 'implausible') {
+    risk_score += 15;
+    trust_score -= 12;
+  } else if (calibrationSignals.lengthBand === 'borderline') {
+    confidenceAdjustment -= 8;
+  }
+
+  // Deterministic calibration offset — not random. Kept small and secondary to real signals.
+  const stableOffset = (nonLinearBase % 9) - 4;
+  const applyStableOffset = (score: number, offset: number) => {
+    const next = clamp(score + offset, 0, 100);
+    const band = (value: number) => value >= 70 ? 'high' : value >= 35 ? 'mid' : 'low';
+    return band(score) === band(next) ? next : score;
+  };
+
+  risk_score = applyStableOffset(risk_score, stableOffset);
+  trust_score = applyStableOffset(trust_score, -stableOffset);
+
+  risk_score = isVerifiedInvalid ? clamp(Math.max(risk_score, 60), 0, 88) : clamp(risk_score, 0, 100);
+  trust_score = isVerifiedInvalid ? clamp(Math.min(trust_score, 30), 5, 30) : clamp(trust_score, 0, 100);
 
   const internalConfidence = clamp(
     Math.round(
@@ -272,16 +377,17 @@ export const runFallbackIntentEngine = (inputNumber: string, options?: EngineOpt
         signals.geoConsistencyScore * 2.2 +
         signals.lengthValidityScore * 1.8 +
         Math.abs(risk_score - trust_score) * 0.25 +
-        (parsed.explicitInternational ? 6 : 2)
+        (parsed.explicitInternational ? 6 : 2) +
+        confidenceAdjustment
     ),
-    40,
-    78
+    hasExternalVerification ? 50 : 40,
+    hasExternalVerification ? 95 : 78
   );
   const confidence = isVerifiedInvalid
-    ? 92
+    ? clamp(internalConfidence, 80, 90)
     : hasExternalVerification
-      ? clamp(Math.max(internalConfidence, 84), 0, 96)
-      : internalConfidence;
+      ? clamp(Math.max(internalConfidence, 80), 0, 95)
+      : clamp(internalConfidence, 60, 78);
 
   const probable_intent = classifyIntent(risk_score, trust_score, signals, isVerifiedInvalid);
   const nuisance_level = nuisanceFromRisk(risk_score);
@@ -302,7 +408,6 @@ export const runFallbackIntentEngine = (inputNumber: string, options?: EngineOpt
 
   const explanation = `${parseReason}${verificationReason} The strongest contributors were ${topContributors}. Risk and trust were scored independently (risk ${risk_score}/100, trust ${trust_score}/100), leading to the recommended action: ${recommended_action.toLowerCase()}.`;
 
-  const line_type = lineTypeFromSignals(signals, parsed, options?.external?.lineType);
   const data_source: CallIntentAnalysis['data_source'] = hasExternalVerification ? 'apilayer_number_verification' : 'internal_engine';
 
   return {
