@@ -14,11 +14,11 @@ import {
 import { assertLimit } from '@/lib/billing/state';
 import { getSessionUser } from '@/lib/auth/portal';
 import { getD1 } from '@/lib/db/d1';
+import { validatePhoneNumberInput } from '@/lib/phone';
 
 export const runtime = 'edge';
 
 const VALID_ISO_PATTERN = /^[A-Z]{2}$/;
-const SAFE_NUMBER_PATTERN = /^[+\d\s\-().]{7,20}$/;
 
 export const OPTIONS = async (request: NextRequest) => optionsResponse(resolveRequestId(request));
 
@@ -39,17 +39,8 @@ export async function POST(request: NextRequest) {
 
     const { number, country } = body as Record<string, unknown>;
 
-    if (
-      typeof number !== 'string' ||
-      !number.trim() ||
-      number.trim().length < 7 ||
-      number.trim().length > 20
-    ) {
-      return errorResponse(requestId, 'INVALID_NUMBER', 'number must be a string between 7 and 20 characters', 400);
-    }
-
-    if (!SAFE_NUMBER_PATTERN.test(number.trim())) {
-      return errorResponse(requestId, 'INVALID_NUMBER', 'number contains invalid characters', 400);
+    if (typeof number !== 'string' || !number.trim()) {
+      return errorResponse(requestId, 'INVALID_NUMBER', 'number must be a non-empty string', 400);
     }
 
     if (
@@ -59,8 +50,20 @@ export async function POST(request: NextRequest) {
       return errorResponse(requestId, 'INVALID_COUNTRY', 'country must be a valid ISO 3166-1 alpha-2 code (e.g. "US", "DZ")', 400);
     }
 
-    const safeNumber = number.trim();
-    const safeCountry = typeof country === 'string' ? country.toUpperCase() : undefined;
+    const safeCountry = typeof country === 'string' ? country.toUpperCase() : 'US';
+    const validation = validatePhoneNumberInput(number.trim(), safeCountry);
+
+    if (validation.state !== 'valid') {
+      return errorResponse(
+        requestId,
+        validation.state === 'incomplete' ? 'INCOMPLETE_NUMBER' : 'INVALID_NUMBER',
+        validation.message ?? 'Use a complete phone number in international format.',
+        400
+      );
+    }
+
+    const safeNumber = validation.canonicalNumber;
+    const resolvedCountry = validation.inferredCountryIso ?? safeCountry;
 
     const db = getDb();
     const apiKey = request.headers.get('x-api-key');
@@ -104,11 +107,11 @@ export async function POST(request: NextRequest) {
     }
 
     const provider = getPhoneProvider();
-    const result = await provider.analyze(safeNumber, safeCountry);
+    const result = await provider.analyze(safeNumber, resolvedCountry);
 
     await persistAnalysis(
       requestId,
-      { number: safeNumber, country: safeCountry, apiKeyId: apiKeyRecord?.id, userId: apiKeyRecord?.user_id ?? sessionUserId },
+      { number: safeNumber, country: resolvedCountry, apiKeyId: apiKeyRecord?.id, userId: apiKeyRecord?.user_id ?? sessionUserId },
       result
     );
 
