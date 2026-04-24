@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { CheckCircle2, HelpCircle, MessageCircle, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { CustomPlanForm } from '@/components/contact/custom-plan-form';
 import { PLAN_DEFINITIONS } from '@/lib/billing/plans';
 
 const freeFeatures = [
@@ -12,11 +13,11 @@ const freeFeatures = [
 ];
 
 const proFeatures = [
-  '500 analyses per month',
+  '1,000 analyses per month',
   'APILayer carrier + region verification',
   'Line type detection: mobile / VoIP / landline',
   '5 API keys',
-  'Webhooks',
+  '10 webhooks',
   'Priority support'
 ];
 
@@ -62,6 +63,7 @@ export default function PricingPage() {
           <div>
             <p className="text-sm text-white/50">{free.label}</p>
             <p className="mt-1 text-3xl font-semibold text-white">${free.monthlyPriceUsd} <span className="text-sm font-normal text-white/45">/ month</span></p>
+            <p className="mt-1 text-xs text-white/35">Good for testing and light personal use.</p>
           </div>
 
           <FeatureList features={freeFeatures} />
@@ -78,12 +80,13 @@ export default function PricingPage() {
           <div>
             <p className="text-sm text-violet-300/80">{pro.label}</p>
             <p className="mt-1 text-3xl font-semibold text-white">${pro.monthlyPriceUsd} <span className="text-sm font-normal text-white/45">/ month</span></p>
+            <p className="mt-1 text-xs text-white/35">Best for active workflows and production usage.</p>
           </div>
 
           <FeatureList features={proFeatures} />
 
           <Link href="/portal/billing" className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-violet-950/30">
-            Upgrade in portal
+            Upgrade to Pro
           </Link>
         </Card>
 
@@ -92,6 +95,7 @@ export default function PricingPage() {
             <div>
               <p className="text-sm text-cyan-200/75">Custom</p>
               <p className="mt-1 text-3xl font-semibold text-white">Let&apos;s talk</p>
+              <p className="mt-1 text-xs text-white/35">For teams, high volume, or tailored limits.</p>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-cyan-200">
               <MessageCircle className="h-5 w-5" />
@@ -100,11 +104,20 @@ export default function PricingPage() {
 
           <FeatureList features={customFeatures} />
 
-          <Link href="/contact?topic=custom-plan" className="inline-flex w-full items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100 hover:bg-cyan-300/15">
+          <a href="#custom-plan-request" className="inline-flex w-full items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100 hover:bg-cyan-300/15">
             Request custom plan
-          </Link>
+          </a>
         </Card>
       </div>
+
+      <Card id="custom-plan-request" className="space-y-5 border border-cyan-400/20 bg-gradient-to-b from-cyan-400/[0.06] to-white/[0.02]">
+        <div className="max-w-2xl space-y-2">
+          <p className="text-sm font-medium text-cyan-200">Custom plan request</p>
+          <h2 className="text-2xl font-semibold text-white">Need higher limits or a tailored workflow?</h2>
+          <p className="text-sm leading-6 text-white/50">Use this dedicated custom-plan form for pricing, volume, enterprise, or API/webhook limit requests. General support remains available through the floating contact button.</p>
+        </div>
+        <CustomPlanForm />
+      </Card>
 
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-white"><HelpCircle className="h-5 w-5 text-violet-200" /><h2 className="text-2xl font-semibold">Questions before upgrading?</h2></div>
