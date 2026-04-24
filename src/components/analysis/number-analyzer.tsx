@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { AlertCircle, CheckCircle2, LoaderCircle, PhoneCall } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AnalysisResultCard } from '@/components/analysis/analysis-result-card';
+import { GuestLimitCard } from '@/components/analysis/guest-limit-card';
 import { PhoneInput, detectDefaultCountryFromLocale } from '@/components/PhoneInput';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -24,6 +25,7 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
   const [result, setResult] = useState<CallIntentAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guestLimitNumber, setGuestLimitNumber] = useState<string | null>(null);
   const autoRunHandledRef = useRef(false);
 
   useEffect(() => {
@@ -34,6 +36,7 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
     setNumber(initialNumber.trim());
     setResult(null);
     setError(null);
+    setGuestLimitNumber(null);
     autoRunHandledRef.current = false;
   }, [initialNumber]);
 
@@ -44,12 +47,14 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
 
     if (validationTarget.state !== 'valid') {
       setResult(null);
+      setGuestLimitNumber(null);
       setError(validationTarget.message ?? 'Enter a complete phone number before analyzing.');
       return;
     }
 
     setLoading(true);
     setError(null);
+    setGuestLimitNumber(null);
 
     try {
       const response = await fetch('/api/analyze', {
@@ -63,6 +68,12 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
         router.push(`/login?next=${encodeURIComponent(`/analysis?number=${validationTarget.canonicalNumber}`)}`);
         return;
       }
+      if (response.status === 403 && payload?.error?.code === 'GUEST_LIMIT_REACHED') {
+        setResult(null);
+        setGuestLimitNumber(validationTarget.canonicalNumber);
+        setNumber(validationTarget.canonicalNumber);
+        return;
+      }
       if (response.status === 402) {
         throw new Error(payload?.error?.message ?? 'Monthly analysis limit reached for your account.');
       }
@@ -74,6 +85,7 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
       setNumber(validationTarget.canonicalNumber);
     } catch (err) {
       setResult(null);
+      setGuestLimitNumber(null);
       setError(err instanceof Error ? err.message : 'We could not process this number right now. Please try again in a few seconds.');
     } finally {
       setLoading(false);
@@ -102,12 +114,14 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
     setNumber(value);
     if (error) setError(null);
     if (result) setResult(null);
+    if (guestLimitNumber) setGuestLimitNumber(null);
   };
 
   const handleCountryChange = (iso: string) => {
     setCountry(iso);
     if (error) setError(null);
     if (result) setResult(null);
+    if (guestLimitNumber) setGuestLimitNumber(null);
   };
 
   const statusBadge =
@@ -143,7 +157,7 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
             </Button>
           </div>
 
-          {initialNumber && !loading && !result && !error ? <p className="text-sm text-white/45">Loaded <span className="font-mono text-white/70">{initialNumber}</span> from the homepage.{autoRun ? ' Your report starts automatically when the number is complete.' : ' You can analyze it without retyping.'}</p> : null}
+          {initialNumber && !loading && !result && !guestLimitNumber && !error ? <p className="text-sm text-white/45">Loaded <span className="font-mono text-white/70">{initialNumber}</span> from the homepage.{autoRun ? ' Your report starts automatically when the number is complete.' : ' You can analyze it without retyping.'}</p> : null}
           {error ? <p className="text-sm text-amber-300/90">{error}</p> : null}
         </div>
       </Card>
@@ -167,6 +181,8 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
               <div className="h-24 w-full animate-pulse rounded-2xl bg-white/10" />
             </div>
           </Card>
+        ) : guestLimitNumber ? (
+          <GuestLimitCard number={guestLimitNumber} />
         ) : result ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}><AnalysisResultCard result={result} /></motion.div>
         ) : (
@@ -175,7 +191,7 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05]"><PhoneCall className="h-5 w-5 text-white/45" /></div>
               <div className="space-y-1">
                 <p className="text-base font-medium text-white">{validation.state === 'valid' ? 'Your number is ready to analyze.' : 'Enter a complete number above to generate a report.'}</p>
-                <p className="text-sm text-white/45">{validation.state === 'valid' ? 'Run the analysis to get trust scoring, risk signals, and a recommended action.' : 'We now block incomplete or implausible numbers before running a report.'}</p>
+                <p className="text-sm text-white/45">{validation.state === 'valid' ? 'Guests get one complete report. Create a free account for 20 monthly analyses.' : 'We now block incomplete or implausible numbers before running a report.'}</p>
               </div>
             </div>
           </Card>
