@@ -20,6 +20,11 @@ const NAV_LINKS: { label: string; href: string }[] = [
   { label: 'API Docs', href: '/api-docs' },
 ];
 
+const COMPANY_LINKS: { label: string; href: string }[] = [
+  { label: 'About', href: '/about' },
+  { label: 'Contact', href: '/contact' },
+];
+
 const initialsFromUser = (user: PortalMe | null) => {
   const source = user?.full_name?.trim() || user?.email || 'FC';
   const parts = source.split(/\s+/).filter(Boolean);
@@ -102,7 +107,7 @@ export function SiteHeader() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map((link) => (
+            {[...NAV_LINKS, ...COMPANY_LINKS].map((link) => (
               <a key={link.href} href={link.href} className="px-3.5 py-2 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/[0.06] transition-all duration-150">
                 {link.label}
               </a>
@@ -157,6 +162,12 @@ export function SiteHeader() {
                 {NAV_LINKS.map((link) => (
                   <a key={link.href} href={link.href} onClick={() => setDrawerOpen(false)} className="px-4 py-3 text-sm text-white/70">{link.label}</a>
                 ))}
+                <div className="my-2 border-t border-white/10" />
+                <p className="px-4 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-white/35">Company</p>
+                {COMPANY_LINKS.map((link) => (
+                  <a key={link.href} href={link.href} onClick={() => setDrawerOpen(false)} className="px-4 py-3 text-sm text-white/70">{link.label}</a>
+                ))}
+                <a href="mailto:contact@filtercalls.com" className="px-4 py-3 text-xs text-violet-200/80">contact@filtercalls.com</a>
               </nav>
 
               <div className="flex flex-col gap-3 p-4 border-t border-white/10">
