@@ -1,9 +1,16 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { COUNTRIES, DIAL_TO_COUNTRY, SORTED_DIAL_CODES } from '@/lib/countries';
+import { COUNTRIES } from '@/lib/countries';
 import { CountryCombobox } from '@/components/CountryCombobox';
 import { cn } from '@/lib/utils';
+import {
+  buildCanonicalPhoneNumber,
+  detectCountryFromPhoneValue,
+  getDialCodeForCountry,
+  getPhoneExamples,
+  validatePhoneNumberInput
+} from '@/lib/phone';
 
 type CountryOption = {
   iso: string;
@@ -20,46 +27,12 @@ type PhoneInputProps = {
   className?: string;
 };
 
-const digitsOnly = (value: string) => value.replace(/\D/g, '');
-
-const replaceDialCode = (number: string, nextDialCode: string, previousDialCode: string) => {
-  const trimmed = number.trim();
-  if (!trimmed) return `+${nextDialCode} `;
-
-  const international = trimmed.startsWith('+') || trimmed.startsWith('00');
-  const rawDigits = digitsOnly(trimmed);
-
-  if (!international) {
-    const localDigits = rawDigits.startsWith(nextDialCode) ? rawDigits.slice(nextDialCode.length) : rawDigits;
-    return `+${nextDialCode}${localDigits ? ` ${localDigits}` : ' '}`;
-  }
-
-  const digits = trimmed.startsWith('00') ? rawDigits.slice(2) : rawDigits;
-  const stripCandidates = [nextDialCode, previousDialCode].sort((a, b) => b.length - a.length);
-  const localDigits = stripCandidates.find((dial) => digits.startsWith(dial))
-    ? digits.slice(stripCandidates.find((dial) => digits.startsWith(dial))?.length ?? 0)
-    : digits;
-
-  return `+${nextDialCode}${localDigits ? ` ${localDigits}` : ' '}`;
-};
-
-const detectCountryFromInput = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed.startsWith('+')) return undefined;
-
-  const digits = digitsOnly(trimmed);
-  const matchedDialCode = SORTED_DIAL_CODES.find((dialCode) => digits.startsWith(dialCode));
-  if (!matchedDialCode) return undefined;
-
-  return DIAL_TO_COUNTRY.get(matchedDialCode);
-};
-
 const uniqueCountries = Array.from(new Map(COUNTRIES.map((country) => [country.iso, country])).values())
   .sort((a, b) => a.name.localeCompare(b.name))
   .map<CountryOption>((country) => ({
     iso: country.iso,
     name: country.name,
-    dialCode: country.iso === 'US' ? '1' : country.dialCodes[0]
+    dialCode: getDialCodeForCountry(country.iso)
   }));
 
 const countryByIso = new Map(uniqueCountries.map((country) => [country.iso, country]));
@@ -87,49 +60,76 @@ export const PhoneInput = ({
     return countryByIso.get(countryIso) ?? countryByIso.get('US') ?? uniqueCountries[0];
   }, [countryIso]);
 
+  const validation = useMemo(() => validatePhoneNumberInput(value, countryIso), [value, countryIso]);
+  const examples = useMemo(() => getPhoneExamples(validation.inferredCountryIso ?? countryIso), [validation.inferredCountryIso, countryIso]);
+
   useEffect(() => {
-    const detectedCountry = detectCountryFromInput(value);
-    if (detectedCountry && detectedCountry.iso !== countryIso) {
-      onCountryChange(detectedCountry.iso);
+    const detectedCountryIso = detectCountryFromPhoneValue(value);
+    if (detectedCountryIso && detectedCountryIso !== countryIso) {
+      onCountryChange(detectedCountryIso);
     }
   }, [value, countryIso, onCountryChange]);
 
   const handleSelectCountry = (nextIso: string) => {
-    const nextCountry = countryByIso.get(nextIso);
-    const previousDialCode = selectedCountry.dialCode;
-
-    if (!nextCountry) return;
-
+    const { canonicalNumber, nationalDigits } = buildCanonicalPhoneNumber(value, nextIso);
     onCountryChange(nextIso);
-    onValueChange(replaceDialCode(value, nextCountry.dialCode, previousDialCode));
+
+    if (!value.trim()) {
+      onValueChange('');
+      return;
+    }
+
+    if (value.trim().startsWith('+')) {
+      onValueChange(canonicalNumber);
+      return;
+    }
+
+    onValueChange(nationalDigits);
   };
 
   const handleNumberChange = (nextValue: string) => {
     onValueChange(nextValue);
 
-    const detectedCountry = detectCountryFromInput(nextValue);
-    if (detectedCountry && detectedCountry.iso !== countryIso) {
-      onCountryChange(detectedCountry.iso);
+    const detectedCountryIso = detectCountryFromPhoneValue(nextValue);
+    if (detectedCountryIso && detectedCountryIso !== countryIso) {
+      onCountryChange(detectedCountryIso);
     }
   };
 
+  const statusTone =
+    validation.state === 'valid'
+      ? 'text-emerald-300'
+      : validation.state === 'invalid'
+        ? 'text-red-300'
+        : 'text-amber-300';
+
   return (
-    <div
-      className={cn(
-        'group flex min-h-11 w-full overflow-visible rounded-xl border border-white/20 bg-white/5 transition focus-within:border-primary/70 focus-within:ring-2 focus-within:ring-primary/30',
-        className
-      )}
-    >
-      <div className="w-[32%] min-w-[9.5rem] border-r border-white/10 md:w-[30%]">
-        <CountryCombobox countries={uniqueCountries} selectedIso={selectedCountry.iso} onSelect={handleSelectCountry} />
+    <div className="space-y-2">
+      <div
+        className={cn(
+          'group flex min-h-11 w-full overflow-visible rounded-xl border border-white/20 bg-white/5 transition focus-within:border-primary/70 focus-within:ring-2 focus-within:ring-primary/30',
+          validation.state === 'invalid' && 'border-red-400/40 focus-within:border-red-400/60 focus-within:ring-red-400/20',
+          className
+        )}
+      >
+        <div className="w-[34%] min-w-[10rem] border-r border-white/10 md:w-[30%]">
+          <CountryCombobox countries={uniqueCountries} selectedIso={selectedCountry.iso} onSelect={handleSelectCountry} />
+        </div>
+        <input
+          value={value}
+          onChange={(event) => handleNumberChange(event.target.value)}
+          placeholder={placeholder}
+          inputMode="tel"
+          autoComplete="tel-national"
+          className="h-11 w-[66%] flex-1 bg-transparent px-3 font-mono text-sm text-foreground placeholder:text-muted focus-visible:outline-none md:w-[70%]"
+        />
       </div>
-      <input
-        value={value}
-        onChange={(event) => handleNumberChange(event.target.value)}
-        placeholder={placeholder}
-        inputMode="tel"
-        className="h-11 w-[68%] flex-1 bg-transparent px-3 font-mono text-sm text-foreground placeholder:text-muted focus-visible:outline-none md:w-[70%]"
-      />
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <p className={cn('text-xs', statusTone)}>{validation.message}</p>
+        <p className="text-xs text-white/45">
+          Example: <span className="font-mono text-white/70">{examples.international}</span>
+        </p>
+      </div>
     </div>
   );
 };
