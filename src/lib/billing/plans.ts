@@ -20,7 +20,7 @@ export const PLAN_DEFINITIONS: Record<PlanId, PlanDefinition> = {
     label: 'Free',
     monthlyPriceUsd: 0,
     limits: {
-      monthlyAnalyses: 100,
+      monthlyAnalyses: 20,
       apiKeys: 1,
       webhooks: 1
     }
