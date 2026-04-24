@@ -19,8 +19,20 @@ import { validatePhoneNumberInput } from '@/lib/phone';
 export const runtime = 'edge';
 
 const VALID_ISO_PATTERN = /^[A-Z]{2}$/;
+const GUEST_ANALYSIS_COOKIE = 'fc_guest_analysis_used';
 
 export const OPTIONS = async (request: NextRequest) => optionsResponse(resolveRequestId(request));
+
+const markGuestAnalysisUsed = (response: NextResponse) => {
+  response.cookies.set(GUEST_ANALYSIS_COOKIE, '1', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: true,
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365
+  });
+  return response;
+};
 
 export async function POST(request: NextRequest) {
   const requestId = resolveRequestId(request);
@@ -68,20 +80,28 @@ export async function POST(request: NextRequest) {
     const db = getDb();
     const apiKey = request.headers.get('x-api-key');
     let sessionUserId: string | null = null;
+    let isGuestAnalysis = false;
 
     if (!apiKey) {
       const d1 = getD1();
-      if (!d1) return errorResponse(requestId, 'DB_UNAVAILABLE', 'Database unavailable', 503);
+      const user = d1 ? await getSessionUser(d1, request) : null;
 
-      const user = await getSessionUser(d1, request);
       if (!user) {
-        return errorResponse(requestId, 'UNAUTHORIZED', 'Login required to run analysis', 401);
-      }
-      sessionUserId = user.id;
-
-      const planCheck = await assertLimit(d1, user.id, { type: 'analyses', amount: 1 });
-      if (!planCheck.ok) {
-        return errorResponse(requestId, 'PLAN_LIMIT_EXCEEDED', `Monthly analysis limit reached (${planCheck.limit}) for current plan`, 402);
+        if (request.cookies.get(GUEST_ANALYSIS_COOKIE)?.value === '1') {
+          return errorResponse(
+            requestId,
+            'GUEST_LIMIT_REACHED',
+            'Create a free account to unlock more caller-intelligence reports.',
+            403
+          );
+        }
+        isGuestAnalysis = true;
+      } else {
+        sessionUserId = user.id;
+        const planCheck = await assertLimit(d1!, user.id, { type: 'analyses', amount: 1 });
+        if (!planCheck.ok) {
+          return errorResponse(requestId, 'PLAN_LIMIT_EXCEEDED', `Monthly analysis limit reached (${planCheck.limit}) for current plan`, 402);
+        }
       }
     }
 
@@ -126,7 +146,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return withResponseHeaders(NextResponse.json(result), requestId);
+    const response = withResponseHeaders(NextResponse.json(result), requestId);
+    return isGuestAnalysis ? markGuestAnalysisUsed(response) : response;
   } catch (err) {
     console.error('[analyze/route] Unhandled error:', err instanceof Error ? err.message : String(err));
     return errorResponse(requestId, 'ANALYZE_FAILED', 'Analysis request failed', 500);
