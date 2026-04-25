@@ -1,6 +1,13 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Headphones, ShieldCheck, TrendingUp } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+
+export const metadata: Metadata = {
+  title: 'Solutions — FilterCalls for Business & Security Teams',
+  description: 'Call intelligence solutions for fraud prevention, support teams, sales teams, and security workflows.',
+  alternates: { canonical: 'https://filtercalls.com/solutions' }
+};
 
 const useCases = [
   {

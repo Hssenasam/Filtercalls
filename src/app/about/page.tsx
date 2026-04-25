@@ -1,6 +1,13 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Radar, ShieldCheck, Workflow } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+
+export const metadata: Metadata = {
+  title: 'About FilterCalls — Call Intelligence OS',
+  description: 'FilterCalls is a privacy-first call intelligence platform for analyzing unknown callers, spam signals, scam risk, and community phone reputation.',
+  alternates: { canonical: 'https://filtercalls.com/about' }
+};
 
 const stats = [
   ['50+ Countries', 'International calling-code context and country-aware validation.'],

@@ -1,8 +1,15 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CheckCircle2, HelpCircle, MessageCircle, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { CustomPlanForm } from '@/components/contact/custom-plan-form';
 import { PLAN_DEFINITIONS } from '@/lib/billing/plans';
+
+export const metadata: Metadata = {
+  title: 'Pricing — FilterCalls Call Intelligence',
+  description: 'Start with free phone analysis or upgrade for higher limits, API access, and professional call intelligence workflows.',
+  alternates: { canonical: 'https://filtercalls.com/pricing' }
+};
 
 const freeFeatures = [
   '20 analyses per month',
