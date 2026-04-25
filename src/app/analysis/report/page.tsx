@@ -5,6 +5,8 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Download, ShieldCheck } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
+import { buildAICallDecision } from '@/lib/decision';
+import type { AICallDecision, AICallDecisionInput, CallDecisionRiskTier } from '@/lib/decision';
 import type { CallIntentAnalysis, NuisanceLevel } from '@/lib/engine/types';
 import type { ReputationSummary, ReportCategory, ReportSeverity, RiskLabel } from '@/lib/reputation/types';
 import { maskPhoneNumber, createReportId, formatReportDate } from '@/lib/report/mask';
@@ -45,6 +47,55 @@ const executiveSummaryByRisk: Record<RiskLabel, string> = {
   watch: 'This number shows some caution signals. The caller may be legitimate, but the available data suggests verifying the identity before responding.',
   suspicious: 'This number shows elevated risk signals. Avoid sharing sensitive information until the caller is independently verified.',
   high_risk: 'This number shows high-risk indicators. Treat this call with caution and avoid payments, credentials, or personal data requests.'
+};
+
+const DECISION_ACTION_LABELS: Record<AICallDecision['primaryAction'], string> = {
+  block: 'BLOCK',
+  send_to_voicemail: 'SEND TO VOICEMAIL',
+  verify_first: 'VERIFY FIRST',
+  answer_cautiously: 'ANSWER CAUTIOUSLY'
+};
+
+const DECISION_SCENARIO_LABELS: Record<AICallDecision['scenario'], string> = {
+  possible_impersonation: 'Possible impersonation',
+  possible_financial_scam: 'Possible financial pressure call',
+  possible_delivery_or_service: 'Possible delivery or service call',
+  possible_debt_collection: 'Possible debt collection call',
+  possible_sales_or_telemarketing: 'Possible sales or telemarketing call',
+  possible_robocall: 'Possible robocall',
+  unknown_caller: 'Unknown caller identity',
+  likely_safe: 'Likely safe caller'
+};
+
+const DECISION_TONE: Record<CallDecisionRiskTier, { badge: string; border: string; soft: string; text: string; bar: string }> = {
+  critical: {
+    badge: 'border-red-200 bg-red-50 text-red-800',
+    border: 'border-red-200',
+    soft: 'bg-red-50',
+    text: 'text-red-800',
+    bar: 'bg-red-600'
+  },
+  high: {
+    badge: 'border-orange-200 bg-orange-50 text-orange-800',
+    border: 'border-orange-200',
+    soft: 'bg-orange-50',
+    text: 'text-orange-800',
+    bar: 'bg-orange-500'
+  },
+  medium: {
+    badge: 'border-amber-200 bg-amber-50 text-amber-800',
+    border: 'border-amber-200',
+    soft: 'bg-amber-50',
+    text: 'text-amber-800',
+    bar: 'bg-amber-500'
+  },
+  low: {
+    badge: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+    border: 'border-emerald-200',
+    soft: 'bg-emerald-50',
+    text: 'text-emerald-800',
+    bar: 'bg-emerald-600'
+  }
 };
 
 const nullableText = (value?: string | null) => (value && value.trim() ? value : 'Unknown');
@@ -165,6 +216,172 @@ const nuisanceScore = (level: NuisanceLevel) => {
     default:
       return 22;
   }
+};
+
+const buildDecisionInput = (result: CallIntentAnalysis, riskLabel: RiskLabel, communitySummary: ReputationSummary): AICallDecisionInput => ({
+  riskScore: result.risk_score,
+  trustScore: result.trust_score,
+  nuisanceLevel: result.nuisance_level,
+  lineType: result.line_type,
+  countryCode: result.country ?? null,
+  probableIntent: result.probable_intent,
+  riskLabel,
+  signals: result.signals.map((signal) => ({
+    label: signal.label,
+    impact: signal.impact,
+    description: signal.detail
+  })),
+  community: {
+    hasCommunityData: communitySummary.has_community_data,
+    total: communitySummary.total,
+    topCategory: communitySummary.top_category,
+    riskLabel: communitySummary.risk_label,
+    verifiedReportCount: communitySummary.verified_report_count,
+    recentReports24h: communitySummary.recent_reports_24h,
+    severity: communitySummary.severity
+  }
+});
+
+const verificationPath = (decision: AICallDecision) => {
+  if (decision.riskTier === 'critical') {
+    return [
+      'End the call immediately or do not answer.',
+      'Do not call back this number directly.',
+      'Contact the claimed organization using its official app, website, or published number.',
+      'Report the call if it requested codes, payment, remote access, or identity details.'
+    ];
+  }
+
+  if (decision.riskTier === 'high') {
+    return [
+      'Let the caller leave a voicemail with name, company, and reason.',
+      'Verify the caller independently before returning the call.',
+      'Do not provide sensitive information during any callback unless you initiated it through official channels.'
+    ];
+  }
+
+  if (decision.riskTier === 'medium') {
+    return [
+      'Ask for the caller’s full name, organization, and reference number.',
+      'Do not share verification codes, payment details, passwords, or personal identification.',
+      'Pause and verify through an official channel before continuing.'
+    ];
+  }
+
+  return [
+    'Ask who is calling and what this is regarding.',
+    'Continue normally if caller identity and purpose are clear.',
+    'Avoid sharing sensitive information unless you initiated the contact.'
+  ];
+};
+
+const AIDecisionPdfSection = ({
+  decision,
+  reportId,
+  generatedAt,
+  maskedNumber
+}: {
+  decision: AICallDecision;
+  reportId: string;
+  generatedAt: string;
+  maskedNumber: string;
+}) => {
+  const tone = DECISION_TONE[decision.riskTier];
+  const primaryReason = decision.reasons[0] ?? 'Decision-support guidance available.';
+  const path = verificationPath(decision);
+
+  return (
+    <Card className={`print-card break-inside-avoid border ${tone.border} bg-white p-6 text-gray-900`}>
+      <div className={`rounded-2xl border ${tone.border} ${tone.soft} p-4`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gray-500">Call Safety Certificate</p>
+            <h2 className="mt-2 text-xl font-semibold">AI Call Safety Coach</h2>
+            <p className="mt-1 text-sm text-gray-700">Decision-support guidance based on risk, trust, verification, and community signals.</p>
+          </div>
+          <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${tone.badge}`}>{DECISION_ACTION_LABELS[decision.primaryAction]}</span>
+        </div>
+
+        <div className="mt-4 grid gap-3 text-xs text-gray-700 sm:grid-cols-2 lg:grid-cols-4">
+          <div><span className="font-semibold text-gray-900">Report ID:</span> {reportId || 'Generating…'}</div>
+          <div><span className="font-semibold text-gray-900">Generated:</span> {generatedAt || 'Generating…'}</div>
+          <div><span className="font-semibold text-gray-900">Masked number:</span> {maskedNumber}</div>
+          <div><span className="font-semibold text-gray-900">Watermark:</span> FilterCalls Safety Report</div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Primary action</p>
+          <p className={`mt-2 text-2xl font-semibold ${tone.text}`}>{DECISION_ACTION_LABELS[decision.primaryAction]}</p>
+          <p className="mt-2 text-sm text-gray-600">{primaryReason}</p>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Risk tier</p>
+          <p className="mt-2 text-2xl font-semibold capitalize text-gray-900">{decision.riskTier}</p>
+          <p className="mt-2 text-sm text-gray-600">Scenario: {DECISION_SCENARIO_LABELS[decision.scenario]}</p>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Decision confidence</p>
+          <p className="mt-2 text-2xl font-semibold text-gray-900">{decision.confidence}%</p>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-200">
+            <div className={`h-full rounded-full ${tone.bar}`} style={{ width: `${Math.max(2, Math.min(100, decision.confidence))}%` }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+          <p className="text-sm font-semibold text-gray-900">Why this decision</p>
+          <ul className="mt-3 space-y-2">
+            {decision.reasons.slice(0, 6).map((reason) => (
+              <li key={reason} className="flex gap-2 text-sm text-gray-700"><span className={`mt-1 h-2 w-2 rounded-full ${tone.bar}`} /> <span>{reason}</span></li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+          <p className="text-sm font-semibold text-gray-900">Recommended response</p>
+          <p className="mt-3 rounded-xl border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-700">“{decision.recommendedResponse}”</p>
+          <p className="mt-3 text-sm font-semibold text-gray-900">Safest next step</p>
+          <p className="mt-1 text-sm leading-6 text-gray-700">{decision.safestNextStep}</p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">Do not share</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {decision.doNotShare.map((item) => (
+              <span key={item} className="rounded-full border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700">{item}</span>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-sm font-semibold text-gray-900">Red flags</p>
+          <ul className="mt-3 space-y-2">
+            {decision.redFlags.slice(0, 5).map((flag) => (
+              <li key={flag} className="text-sm leading-5 text-gray-700">• {flag}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <p className="text-sm font-semibold text-gray-900">Verification path</p>
+          <ol className="mt-3 space-y-2">
+            {path.map((step, index) => (
+              <li key={step} className="flex gap-2 text-sm leading-5 text-gray-700"><span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white ${tone.bar}`}>{index + 1}</span><span>{step}</span></li>
+            ))}
+          </ol>
+        </div>
+      </div>
+
+      <p className="mt-5 rounded-xl border border-gray-200 bg-white p-3 text-xs leading-5 text-gray-600">{decision.disclaimer}</p>
+    </Card>
+  );
 };
 
 const ErrorState = ({ title, message, cta }: { title: string; message: string; cta: string }) => (
@@ -317,6 +534,7 @@ function AnalysisPdfReportPageContent() {
 
   const result = reportData.data;
   const resolvedRiskLabel = toRiskLabel(result.risk_score);
+  const aiDecision = buildAICallDecision(buildDecisionInput(result, resolvedRiskLabel, communitySummary));
   const summary = executiveSummaryByRisk[resolvedRiskLabel] ?? 'This report summarizes available phone intelligence signals to support a safer decision.';
   const maskedInput = maskPhoneNumber(reportData.number);
   const maskedFormatted = maskPhoneNumber(result.formatted_number);
@@ -400,6 +618,8 @@ function AnalysisPdfReportPageContent() {
           <ScoreBar label="Confidence" value={Math.max(0, Math.min(100, result.confidence))} kind="confidence" note="Confidence in this recommendation." />
           <ScoreBar label="Nuisance Level" value={nuisanceScore(result.nuisance_level)} kind="nuisance" note="Estimated call disruption severity." />
         </div>
+
+        <AIDecisionPdfSection decision={aiDecision} reportId={reportId} generatedAt={generatedAt} maskedNumber={maskedInput} />
 
         <Card className="print-card border border-gray-200 bg-white p-6 text-gray-900">
           <h2 className="text-lg font-semibold">Recommended Action</h2>
