@@ -1,7 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { BarChart3, CheckCircle2, LoaderCircle, Share2, ShieldAlert } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import type { ReputationSummary, ReportCategory, ReportSeverity } from '@/lib/reputation/types';
@@ -49,7 +48,7 @@ export function CommunityReputation({ number }: { number: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const fetchSummary = async () => {
+  const fetchSummary = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/reports/summary?number=${encodeURIComponent(number)}`, { cache: 'no-store' });
@@ -59,11 +58,11 @@ export function CommunityReputation({ number }: { number: string }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [number]);
 
   useEffect(() => {
     void fetchSummary();
-  }, [number]);
+  }, [fetchSummary]);
 
   const shareUrl = useMemo(() => {
     if (!summary.number_hash_preview || typeof window === 'undefined') return null;
