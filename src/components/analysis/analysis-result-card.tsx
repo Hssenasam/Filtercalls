@@ -1,10 +1,19 @@
-import { AlertTriangle, CheckCircle2, DatabaseZap, PhoneForwarded, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, DatabaseZap, Download, PhoneForwarded, ShieldCheck } from 'lucide-react';
 import { CallIntentAnalysis } from '@/lib/engine/types';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScoreRing, getScoreToneClasses } from '@/components/analysis/score-ring';
 import { CommunityReputation } from '@/components/reputation/community-reputation';
 import { cn } from '@/lib/utils';
+
+const REPORT_STORAGE_TTL_MS = 30 * 60 * 1000;
+
+type StoredReportData = {
+  number: string;
+  data: CallIntentAnalysis;
+  createdAt: number;
+};
 
 const verificationTone = (result: CallIntentAnalysis) => {
   if (result.verification.status === 'verified') return 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200';
@@ -25,9 +34,65 @@ const recommendationTone = (riskScore: number, trustScore: number) => {
   return 'border-emerald-400/25 bg-emerald-400/10 text-emerald-200';
 };
 
+const cleanupOldStoredReports = (storage: Storage) => {
+  const now = Date.now();
+  const keysToRemove: string[] = [];
+
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (!key?.startsWith('fc_report_')) continue;
+
+    const raw = storage.getItem(key);
+    if (!raw) {
+      keysToRemove.push(key);
+      continue;
+    }
+
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') {
+        keysToRemove.push(key);
+        continue;
+      }
+
+      const entry = parsed as Partial<StoredReportData>;
+      if (typeof entry.createdAt !== 'number' || now - entry.createdAt > REPORT_STORAGE_TTL_MS) {
+        keysToRemove.push(key);
+      }
+    } catch {
+      keysToRemove.push(key);
+    }
+  }
+
+  keysToRemove.forEach((key) => storage.removeItem(key));
+};
+
+const persistReportData = (key: string, payload: StoredReportData) => {
+  const serialized = JSON.stringify(payload);
+  window.sessionStorage.setItem(key, serialized);
+  window.localStorage.setItem(key, serialized);
+
+  cleanupOldStoredReports(window.sessionStorage);
+  cleanupOldStoredReports(window.localStorage);
+};
+
 export const AnalysisResultCard = ({ result }: { result: CallIntentAnalysis }) => {
   const confidence = Math.max(0, Math.min(100, Math.round(result.confidence)));
   const confidenceClasses = confidenceTone(confidence);
+
+  const handlePdfExport = () => {
+    const storageKey = `fc_report_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const payload: StoredReportData = {
+      number: result.input_number || result.normalized_number || result.formatted_number,
+      data: result,
+      createdAt: Date.now()
+    };
+
+    persistReportData(storageKey, payload);
+
+    const url = `/analysis/report?key=${encodeURIComponent(storageKey)}&number=${encodeURIComponent(payload.number)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <Card className="space-y-5">
@@ -78,6 +143,20 @@ export const AnalysisResultCard = ({ result }: { result: CallIntentAnalysis }) =
         </div>
 
         <p className="mt-3 flex items-center gap-2 text-xs text-white/35"><DatabaseZap className="h-3.5 w-3.5" /> Data source: {result.data_source === 'apilayer_number_verification' ? 'APILayer Number Verification + FilterCalls risk engine' : 'FilterCalls internal deterministic risk engine'}</p>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-white">Professional PDF report</p>
+            <p className="text-xs text-white/50">Opens a print-ready report. Use browser Print → Save as PDF.</p>
+          </div>
+          <Button type="button" variant="secondary" className="gap-2" onClick={handlePdfExport}>
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Download PDF Report</span>
+            <span className="sm:hidden">PDF Report</span>
+          </Button>
+        </div>
       </div>
 
       <CommunityReputation number={result.formatted_number} />
