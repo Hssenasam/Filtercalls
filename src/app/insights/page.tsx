@@ -1,10 +1,20 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { BarChart3, Globe2, ShieldCheck, TrendingUp } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import type { PublicInsights } from '@/lib/reputation/types';
+import { getD1 } from '@/lib/db/d1';
+import { getRecentPublicReports } from '@/lib/reputation/store';
+import type { PublicInsights, RecentPublicReport } from '@/lib/reputation/types';
 
 export const runtime = 'edge';
 export const revalidate = 120;
+
+export const metadata: Metadata = {
+  title: 'Global Caller Intelligence Insights — FilterCalls',
+  description: 'Real-time community-driven phone reputation data. Spam reports, scam patterns, risk trends, and privacy-first caller intelligence insights.',
+  alternates: { canonical: 'https://filtercalls.com/insights' },
+  robots: { index: true, follow: true }
+};
 
 const empty: PublicInsights = {
   total_reports: 0,
@@ -26,14 +36,39 @@ const getInsights = async () => {
   }
 };
 
+const getRecent = async (): Promise<RecentPublicReport[]> => {
+  const db = getD1();
+  if (!db) return [];
+  try {
+    return await getRecentPublicReports(db, 10);
+  } catch {
+    return [];
+  }
+};
+
 export default async function InsightsPage() {
   const data = await getInsights();
+  const recentReports = await getRecent();
   const maxCategory = Math.max(1, ...data.top_categories.map((item) => item.count));
   const maxSeverity = Math.max(1, ...data.severity_mix.map((item) => item.count));
   const totalCategory = Math.max(1, data.top_categories.reduce((sum, item) => sum + item.count, 0));
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: 'Global Caller Intelligence Insights — FilterCalls',
+    description: 'Real-time community-driven phone reputation data. Spam reports, scam patterns, risk trends, and privacy-first caller intelligence insights.',
+    url: 'https://filtercalls.com/insights',
+    publisher: {
+      '@type': 'Organization',
+      name: 'FilterCalls',
+      url: 'https://filtercalls.com'
+    }
+  };
+
   return (
     <section className="space-y-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div className="max-w-3xl space-y-4">
         <p className="inline-flex rounded-full border border-violet-400/20 bg-violet-400/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-violet-200">Public Intelligence</p>
         <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">Global Caller Reputation Intelligence</h1>
@@ -90,6 +125,23 @@ export default async function InsightsPage() {
         </div>
       </Card>
 
+      <Card className="space-y-4 border border-white/10 bg-white/[0.03]">
+        <h2 className="text-2xl font-semibold text-white">Most Reported Numbers</h2>
+        {recentReports.length ? (
+          <div className="grid gap-3">
+            {recentReports.map((item) => (
+              <div key={item.hash} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                <p className="font-mono text-sm text-white/80">Caller ···{item.hash.slice(0, 8)}</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-white/45">{item.total} reports</span>
+                  <Link href={`/report/${item.hash}`} className="text-sm text-violet-200 hover:text-violet-100">View report →</Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-sm text-white/45">No public reports available yet.</p>}
+      </Card>
+
       <Card className="space-y-3 border border-emerald-400/20 bg-emerald-400/[0.04]">
         <h2 className="flex items-center gap-2 text-2xl font-semibold text-white"><ShieldCheck className="h-5 w-5 text-emerald-200" /> Privacy by design</h2>
         <ul className="grid gap-2 text-sm text-white/55 md:grid-cols-2">
@@ -101,8 +153,8 @@ export default async function InsightsPage() {
       </Card>
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Link href="/analysis" className="inline-flex justify-center rounded-xl bg-violet-600 px-5 py-3 text-sm font-medium text-white">Analyze a number →</Link>
-        <Link href="/analysis" className="inline-flex justify-center rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-medium text-white/80">Report suspicious activity →</Link>
+        <Link href="/analysis" className="inline-flex justify-center rounded-xl bg-violet-600 px-5 py-3 text-sm font-medium text-white">Start analyzing numbers →</Link>
+        <Link href="/pricing" className="inline-flex justify-center rounded-xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-medium text-white/80">View pricing →</Link>
       </div>
     </section>
   );

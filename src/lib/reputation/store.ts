@@ -2,7 +2,7 @@ import type { D1DatabaseLike } from '@/lib/db/d1';
 import { getCallingCode } from '@/lib/reputation/country-map';
 import { sha256Hex } from '@/lib/reputation/hash';
 import { summarizeReports, emptyReputationSummary } from '@/lib/reputation/scoring';
-import { CommunityReportRow, ReportCategory, ReportSeverity } from '@/lib/reputation/types';
+import { CommunityReportRow, RecentPublicReport, ReportCategory, ReportSeverity } from '@/lib/reputation/types';
 
 const ONE_HOUR = 60 * 60 * 1000;
 const DAY = 24 * 60 * 60 * 1000;
@@ -135,4 +135,21 @@ export const getPublicInsights = async (db: D1DatabaseLike) => {
   const critical = await db.prepare("SELECT COUNT(*) as count FROM community_reports WHERE created_at >= ? AND severity = 'critical'").bind(since24h).first<{ count: number }>();
 
   return { total, recent, categories, severities, countries, highRisk, critical };
+};
+
+
+export const getRecentPublicReports = async (db: D1DatabaseLike, limit = 10): Promise<RecentPublicReport[]> => {
+  const safeLimit = Math.max(1, Math.min(200, Math.floor(limit)));
+  const result = await db
+    .prepare('SELECT number_hash, MAX(created_at) as last_reported_at, COUNT(*) as total FROM community_reports GROUP BY number_hash HAVING COUNT(*) > 0 ORDER BY last_reported_at DESC LIMIT ?')
+    .bind(safeLimit)
+    .all<{ number_hash: string; last_reported_at: number; total: number }>();
+
+  return result.results
+    .map((row) => ({
+      hash: String(row.number_hash),
+      last_reported_at: Number(row.last_reported_at),
+      total: Number(row.total)
+    }))
+    .filter((row) => /^[a-f0-9]{12,64}$/i.test(row.hash) && row.total > 0 && Number.isFinite(row.last_reported_at));
 };

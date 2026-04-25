@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
-        disallow: ['/api/', '/portal/']
+        allow: ['/', '/report/', '/insights', '/analysis'],
+        disallow: ['/portal/', '/api/', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email']
       }
     ],
     sitemap: 'https://filtercalls.com/sitemap.xml'

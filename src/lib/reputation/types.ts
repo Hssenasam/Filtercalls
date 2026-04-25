@@ -48,3 +48,10 @@ export type PublicInsights = {
   risk_trend: { high_risk_reports_24h: number; critical_reports_24h: number };
   top_countries: Array<{ country_code: string; count: number }>;
 };
+
+
+export type RecentPublicReport = {
+  hash: string;
+  last_reported_at: number;
+  total: number;
+};
