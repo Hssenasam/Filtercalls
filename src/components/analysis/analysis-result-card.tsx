@@ -3,6 +3,7 @@ import { CallIntentAnalysis } from '@/lib/engine/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { AICallDecisionCard } from '@/components/analysis/ai-call-decision-card';
 import { ScoreRing, getScoreToneClasses } from '@/components/analysis/score-ring';
 import { CommunityReputation } from '@/components/reputation/community-reputation';
 import { cn } from '@/lib/utils';
@@ -125,6 +126,8 @@ export const AnalysisResultCard = ({ result }: { result: CallIntentAnalysis }) =
           <p className={cn('mt-2 text-xl font-semibold', confidenceClasses.text)}>{confidence}%</p>
         </div>
       </div>
+
+      <AICallDecisionCard result={result} />
 
       <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
