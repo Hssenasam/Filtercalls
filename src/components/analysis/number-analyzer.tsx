@@ -18,6 +18,8 @@ type NumberAnalyzerProps = {
   autoRun?: boolean;
 };
 
+const trustChips = ['🔒 No raw public numbers', '⚡ Edge-powered analysis', '🛡 Privacy-first reports'];
+
 export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = true }: NumberAnalyzerProps) => {
   const router = useRouter();
   const [number, setNumber] = useState(initialNumber.trim());
@@ -155,6 +157,14 @@ export const NumberAnalyzer = ({ compact = false, initialNumber = '', autoRun = 
             <Button className="h-11 w-full md:w-auto" onClick={() => void runAnalysis()} disabled={loading || validation.state !== 'valid'}>
               {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : 'Analyze now'}
             </Button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {trustChips.map((chip) => (
+              <span key={chip} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-white/40">
+                {chip}
+              </span>
+            ))}
           </div>
 
           {initialNumber && !loading && !result && !guestLimitNumber && !error ? <p className="text-sm text-white/45">Loaded <span className="font-mono text-white/70">{initialNumber}</span> from the homepage.{autoRun ? ' Your report starts automatically when the number is complete.' : ' You can analyze it without retyping.'}</p> : null}
