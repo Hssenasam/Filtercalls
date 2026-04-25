@@ -3,6 +3,7 @@ import { CallIntentAnalysis } from '@/lib/engine/types';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ScoreRing, getScoreToneClasses } from '@/components/analysis/score-ring';
+import { CommunityReputation } from '@/components/reputation/community-reputation';
 import { cn } from '@/lib/utils';
 
 const verificationTone = (result: CallIntentAnalysis) => {
@@ -66,34 +67,20 @@ export const AnalysisResultCard = ({ result }: { result: CallIntentAnalysis }) =
             <p className="flex items-center gap-2 text-sm font-medium text-white"><ShieldCheck className="h-4 w-4" /> Verification intelligence</p>
             <p className="text-sm text-muted">{result.verification.confidence_note}</p>
           </div>
-          <Badge className={verificationTone(result)}>
-            {result.verification.status === 'verified' ? 'External verification' : result.verification.status === 'not_verified' ? 'Not verified' : 'Internal engine only'}
-          </Badge>
+          <Badge className={verificationTone(result)}>{result.verification.status === 'verified' ? 'External verification' : result.verification.status === 'not_verified' ? 'Not verified' : 'Internal engine only'}</Badge>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-            <p className="text-xs text-muted">Valid number</p>
-            <p className="mt-1 text-sm font-medium">{formatValue(result.is_valid)}</p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-            <p className="text-xs text-muted">Line type</p>
-            <p className="mt-1 text-sm font-medium capitalize">{formatValue(result.line_type)}</p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-            <p className="text-xs text-muted">Carrier</p>
-            <p className="mt-1 text-sm font-medium">{formatValue(result.carrier)}</p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-            <p className="text-xs text-muted">Region</p>
-            <p className="mt-1 text-sm font-medium">{formatValue(result.region)}</p>
-          </div>
+          <div className="rounded-xl border border-white/10 bg-black/10 p-3"><p className="text-xs text-muted">Valid number</p><p className="mt-1 text-sm font-medium">{formatValue(result.is_valid)}</p></div>
+          <div className="rounded-xl border border-white/10 bg-black/10 p-3"><p className="text-xs text-muted">Line type</p><p className="mt-1 text-sm font-medium capitalize">{formatValue(result.line_type)}</p></div>
+          <div className="rounded-xl border border-white/10 bg-black/10 p-3"><p className="text-xs text-muted">Carrier</p><p className="mt-1 text-sm font-medium">{formatValue(result.carrier)}</p></div>
+          <div className="rounded-xl border border-white/10 bg-black/10 p-3"><p className="text-xs text-muted">Region</p><p className="mt-1 text-sm font-medium">{formatValue(result.region)}</p></div>
         </div>
 
-        <p className="mt-3 flex items-center gap-2 text-xs text-white/35">
-          <DatabaseZap className="h-3.5 w-3.5" /> Data source: {result.data_source === 'apilayer_number_verification' ? 'APILayer Number Verification + FilterCalls risk engine' : 'FilterCalls internal deterministic risk engine'}
-        </p>
+        <p className="mt-3 flex items-center gap-2 text-xs text-white/35"><DatabaseZap className="h-3.5 w-3.5" /> Data source: {result.data_source === 'apilayer_number_verification' ? 'APILayer Number Verification + FilterCalls risk engine' : 'FilterCalls internal deterministic risk engine'}</p>
       </div>
+
+      <CommunityReputation number={result.formatted_number} />
 
       <div className="signal-separator" />
 
@@ -108,13 +95,7 @@ export const AnalysisResultCard = ({ result }: { result: CallIntentAnalysis }) =
           <div key={signal.id} className="rounded-xl border border-white/15 bg-white/5 p-3">
             <div className="flex items-start justify-between gap-3">
               <p className="flex items-center gap-2 text-sm font-medium">
-                {signal.impact === 'positive' ? (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                ) : signal.impact === 'negative' ? (
-                  <AlertTriangle className="h-4 w-4 text-amber-300" />
-                ) : (
-                  <span className="h-2 w-2 rounded-full bg-muted" />
-                )}
+                {signal.impact === 'positive' ? <CheckCircle2 className="h-4 w-4 text-emerald-300" /> : signal.impact === 'negative' ? <AlertTriangle className="h-4 w-4 text-amber-300" /> : <span className="h-2 w-2 rounded-full bg-muted" />}
                 {signal.label}
               </p>
               <span className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] uppercase tracking-wide text-white/45">{signal.impact}</span>
