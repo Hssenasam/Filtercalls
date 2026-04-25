@@ -1,4 +1,4 @@
-import type { AICallDecision } from '@/lib/decision';
+import type { AICallDecision } from '../decision';
 
 const ACTION_LABELS: Record<AICallDecision['primaryAction'], string> = {
   block: 'BLOCK',
