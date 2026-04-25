@@ -36,10 +36,14 @@ const customFeatures = [
   'Custom billing discussion'
 ];
 
+const trustBadges = ['🔒 Privacy-first', '⚡ Edge-powered', '🌍 No data selling', '🛡 Secure by design'];
+
 const faqs = [
-  ['Can I cancel anytime?', 'Yes. Cancel from your portal. No commitments.'],
-  ['What happens when I hit the limit?', 'Analysis is paused until the next billing cycle. Upgrade to Pro for higher usage.'],
-  ['Is my data private?', 'FilterCalls is designed to minimize sensitive storage and avoid exposing raw phone data publicly.']
+  ['Is the free plan really free?', 'Yes. 20 analyses per month, no credit card needed.'],
+  ['What counts as one analysis?', 'Each number lookup counts as one analysis. Re-analyzing the same number counts again.'],
+  ['Are phone numbers stored?', 'Community reputation stores SHA-256 hashes. Raw numbers are not stored in the reputation database.'],
+  ['Can I upgrade or downgrade anytime?', 'Yes. Manage your plan in the portal. No lock-in.'],
+  ['What is a Custom Plan?', 'Custom Plans are for teams that need higher volume, API access, or custom integrations. Use the form below to request one.']
 ];
 
 const FeatureList = ({ features }: { features: string[] }) => (
@@ -117,6 +121,14 @@ export default function PricingPage() {
         </Card>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {trustBadges.map((badge) => (
+          <div key={badge} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-sm font-medium text-white/70">
+            {badge}
+          </div>
+        ))}
+      </div>
+
       <Card id="custom-plan-request" className="space-y-5 border border-cyan-400/20 bg-gradient-to-b from-cyan-400/[0.06] to-white/[0.02]">
         <div className="max-w-2xl space-y-2">
           <p className="text-sm font-medium text-cyan-200">Custom plan request</p>
@@ -128,7 +140,7 @@ export default function PricingPage() {
 
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-white"><HelpCircle className="h-5 w-5 text-violet-200" /><h2 className="text-2xl font-semibold">Questions before upgrading?</h2></div>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {faqs.map(([question, answer]) => (
             <Card key={question} className="border border-white/10 bg-white/[0.03]">
               <h3 className="font-semibold text-white">{question}</h3>
