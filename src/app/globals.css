@@ -4,7 +4,7 @@
 
 :root {
   color-scheme: dark;
-  --portal-header-height: 124px;
+  --portal-header-height: 74px;
 }
 
 html,
@@ -39,6 +39,6 @@ body {
 
 @media (min-width: 768px) {
   :root {
-    --portal-header-height: 136px;
+    --portal-header-height: 76px;
   }
 }
