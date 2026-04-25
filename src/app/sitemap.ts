@@ -12,7 +12,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/about`, priority: 0.7 },
     { url: `${base}/pricing`, priority: 0.7 },
     { url: `${base}/solutions`, priority: 0.6 },
-    { url: `${base}/contact`, priority: 0.5 }
+    { url: `${base}/changelog`, priority: 0.6 },
+    { url: `${base}/security`, priority: 0.6 },
+    { url: `${base}/contact`, priority: 0.5 },
+    { url: `${base}/privacy`, priority: 0.5 }
   ];
 
   const db = getD1();
