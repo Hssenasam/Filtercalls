@@ -3,20 +3,22 @@ import { Zap, ArrowRight } from 'lucide-react';
 
 const FOOTER_LINKS: Record<string, { label: string; href: string }[]> = {
   Product: [
-    { label: 'Number Analysis', href: '/analysis' },
-    { label: 'API', href: '/api-docs' },
-    { label: 'Solutions', href: '/solutions' },
+    { label: 'Analysis', href: '/analysis' },
     { label: 'Pricing', href: '/pricing' },
+    { label: 'Solutions', href: '/solutions' },
+    { label: 'Changelog', href: '/changelog' }
   ],
-  Developers: [
-    { label: 'API Docs', href: '/api-docs' },
-    { label: 'Webhooks', href: '/api-docs#webhooks' },
+  Intelligence: [
+    { label: 'Insights', href: '/insights' },
+    { label: 'Public Reports', href: '/insights' },
+    { label: 'Safety Reports', href: '/analysis' }
   ],
   Company: [
     { label: 'About', href: '/about' },
     { label: 'Contact', href: '/contact' },
-    { label: 'Insights', href: '/insights' },
-  ],
+    { label: 'Security', href: '/security' },
+    { label: 'Privacy', href: '/privacy' }
+  ]
 };
 
 export function SiteFooter() {
@@ -52,8 +54,7 @@ export function SiteFooter() {
             <span className="text-white font-semibold text-[15px]">FilterCalls</span>
           </Link>
           <p className="text-white/35 text-sm leading-relaxed">
-            Phone number intelligence platform for individuals, developers,
-            and teams who need trusted caller context.
+            Privacy-first call intelligence OS for individuals, security teams, and developers.
           </p>
         </div>
 
@@ -66,12 +67,12 @@ export function SiteFooter() {
             <ul className="flex flex-col gap-2.5">
               {links.map(({ label, href }) => (
                 <li key={label}>
-                  <a
+                  <Link
                     href={href}
                     className="text-white/40 hover:text-white/80 text-sm transition-colors"
                   >
                     {label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -83,9 +84,14 @@ export function SiteFooter() {
       <div className="border-t border-white/[0.05]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-white/25 text-xs">
-            © {new Date().getFullYear()} FilterCalls. All rights reserved.
+            © 2026 FilterCalls. All rights reserved.
           </p>
-          <p className="text-white/20 text-xs">Phone Number Intelligence Platform</p>
+          <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-white/25">
+            <span>Call Intelligence OS</span>
+            <Link href="/privacy" className="hover:text-white/60">Privacy</Link>
+            <Link href="/security" className="hover:text-white/60">Security</Link>
+            <Link href="/contact" className="hover:text-white/60">Contact</Link>
+          </div>
         </div>
       </div>
     </footer>
