@@ -79,47 +79,49 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <header className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-slate-950/88 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <Link href="/" className="inline-flex items-center gap-3 font-semibold text-white">
-                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 via-indigo-500 to-sky-500 shadow-lg shadow-indigo-900/40">⚡</span>
-                <span className="text-lg">FilterCalls</span>
+      <header className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-slate-950/78 shadow-[0_16px_55px_rgba(2,6,23,0.28)] backdrop-blur-2xl supports-[backdrop-filter]:bg-slate-950/62">
+        <div className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+          <div className="flex min-h-[56px] items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <Link href="/" className="inline-flex min-w-0 items-center gap-2 font-semibold text-white">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 via-indigo-500 to-sky-500 text-sm shadow-lg shadow-indigo-900/35">⚡</span>
+                <span className="truncate text-lg leading-none">FilterCalls</span>
               </Link>
-              <p className="mt-1 truncate text-xs text-slate-400 sm:text-sm">{currentPage} · Portal workspace</p>
+              <span className="hidden h-5 w-px bg-white/10 sm:block" />
+              <p className="hidden truncate text-sm text-slate-400 sm:block">{currentPage} · Portal workspace</p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="hidden rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-right text-xs text-slate-400 md:block">
-                <p className="font-medium text-white">{account?.plan?.label || 'Free'} plan</p>
-                <p>{account?.plan?.usage.analyses_remaining ?? 0} analyses left</p>
+            <nav className="hidden shrink-0 items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.035] p-1 shadow-inner shadow-black/20 lg:flex">
+              {portalNav.map((item) => {
+                const active = pathname === item.href;
+                return (
+                  <Link key={item.href} href={item.href} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${active ? 'bg-gradient-to-r from-sky-500/30 to-indigo-500/30 text-white shadow-[inset_0_0_0_1px_rgba(125,211,252,0.28)]' : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'}`}>
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <div className="hidden rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2 text-right text-xs text-slate-400 shadow-inner shadow-black/10 md:block">
+                <p className="font-semibold leading-4 text-white">{account?.plan?.label || 'Free'} plan</p>
+                <p className="leading-4">{account?.plan?.usage.analyses_remaining ?? 0} analyses left</p>
               </div>
-              <button onClick={() => setPanelOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-semibold text-white transition hover:bg-white/[0.07]">
+              <button onClick={() => setPanelOpen(true)} className="flex h-10 min-w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] px-3 text-sm font-semibold text-white transition hover:bg-white/[0.08]" aria-label="Open account panel">
                 {initials(account)}
               </button>
-              <button onClick={() => setMenuOpen((value) => !value)} className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white transition hover:bg-white/[0.07] md:hidden">
+              <button onClick={() => setMenuOpen((value) => !value)} className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] text-white transition hover:bg-white/[0.08] lg:hidden" aria-label="Open portal navigation">
                 ☰
               </button>
             </div>
           </div>
-
-          <nav className="mt-3 hidden gap-2 overflow-x-auto pb-1 md:flex">
-            {portalNav.map((item) => {
-              const active = pathname === item.href;
-              return (
-                <Link key={item.href} href={item.href} className={`rounded-2xl px-4 py-2.5 text-sm font-medium transition ${active ? 'bg-gradient-to-r from-sky-500/25 to-indigo-500/25 text-white shadow-[inset_0_0_0_1px_rgba(125,211,252,0.25)]' : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'}`}>
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
         </div>
       </header>
 
       {menuOpen ? (
-        <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setMenuOpen(false)}>
-          <div className="absolute inset-x-4 top-[72px] rounded-3xl border border-white/10 bg-slate-950/95 p-3 shadow-2xl shadow-black/40" onClick={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setMenuOpen(false)}>
+          <div className="absolute inset-x-4 top-[68px] rounded-3xl border border-white/10 bg-slate-950/95 p-3 shadow-2xl shadow-black/40" onClick={(event) => event.stopPropagation()}>
+            <p className="px-3 pb-2 text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Portal navigation</p>
             <div className="grid gap-2">
               {portalNav.map((item) => {
                 const active = pathname === item.href;
