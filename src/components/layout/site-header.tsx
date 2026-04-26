@@ -15,6 +15,7 @@ type PortalMe = {
 
 const NAV_LINKS: { label: string; href: string }[] = [
   { label: 'Features', href: '/#features' },
+  { label: 'Playbooks', href: '/scams' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Solutions', href: '/solutions' },
   { label: 'Insights', href: '/insights' },

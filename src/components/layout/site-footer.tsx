@@ -9,6 +9,7 @@ const FOOTER_LINKS: Record<string, { label: string; href: string }[]> = {
     { label: 'Changelog', href: '/changelog' }
   ],
   Intelligence: [
+    { label: 'Scam Playbooks', href: '/scams' },
     { label: 'Insights', href: '/insights' },
     { label: 'Public Reports', href: '/insights' },
     { label: 'Safety Reports', href: '/analysis' }
