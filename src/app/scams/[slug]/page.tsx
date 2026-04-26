@@ -6,8 +6,6 @@ import { Card } from '@/components/ui/card';
 import { getScamPattern, scamPatterns } from '@/lib/scams/patterns';
 import type { ScamPatternRecommendedAction, ScamPatternRiskTier } from '@/lib/scams/patterns';
 
-export const runtime = 'edge';
-
 const baseUrl = 'https://filtercalls.com';
 
 const RISK_STYLES: Record<ScamPatternRiskTier, { badge: string; panel: string; dot: string; text: string }> = {
