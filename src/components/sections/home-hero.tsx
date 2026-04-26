@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Search, ArrowRight, Shield, Globe, Zap, Sparkles } from 'lucide-react';
+import { Search, ArrowRight, Shield, Globe, Zap, Sparkles, UserCheck } from 'lucide-react';
 
 const CHIPS = [
   { label: '+1 202 555 0100', hint: 'US' },
@@ -20,12 +20,43 @@ const TRUST_ITEMS = [
   { icon: Shield, label: 'Trust scored 0-100' },
 ];
 
+type PortalAccountPreview = {
+  email?: string;
+  plan?: {
+    label?: string;
+    usage?: {
+      analyses_remaining?: number;
+    };
+  };
+};
+
 export function HomeHero() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [account, setAccount] = useState<PortalAccountPreview | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch('/api/portal/me', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as PortalAccountPreview;
+      })
+      .then((payload) => {
+        if (!cancelled) setAccount(payload);
+      })
+      .catch(() => {
+        if (!cancelled) setAccount(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const validate = (v: string) => {
     if (!v.trim()) return 'Enter a phone number to continue.';
@@ -51,6 +82,10 @@ export function HomeHero() {
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSubmit();
   };
+
+  const planLabel = account?.plan?.label ?? 'Free';
+  const analysesRemaining = account?.plan?.usage?.analyses_remaining;
+  const isAuthenticated = Boolean(account?.email);
 
   return (
     <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-4 pt-24 pb-16 overflow-hidden">
@@ -80,13 +115,24 @@ export function HomeHero() {
             <div className="absolute top-0 inset-x-8 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full" />
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-left">
               <div>
-                <p className="text-sm font-medium text-white">Free caller report</p>
-                <p className="text-xs text-white/45">Guests can run one full report. Create a free account to unlock 20 monthly analyses.</p>
+                <p className="text-sm font-medium text-white">{isAuthenticated ? 'Account caller report' : 'Free caller report'}</p>
+                <p className="text-xs text-white/45">
+                  {isAuthenticated
+                    ? 'Run a full intelligence report using your account allowance.'
+                    : 'Guests can run one full report. Create a free account to unlock 20 monthly analyses.'}
+                </p>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200">
-                <Sparkles className="h-3.5 w-3.5" />
-                1 guest report included
-              </div>
+              {isAuthenticated ? (
+                <div className="inline-flex items-center gap-2 rounded-full border border-violet-400/15 bg-violet-400/10 px-3 py-1.5 text-xs text-violet-200">
+                  <UserCheck className="h-3.5 w-3.5" />
+                  {typeof analysesRemaining === 'number' ? `${planLabel} plan · ${analysesRemaining} analyses left` : `${planLabel} plan`}
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  1 guest report included
+                </div>
+              )}
             </div>
 
             <div className={`flex flex-col sm:flex-row gap-2 rounded-xl border transition-all duration-200 overflow-hidden ${error ? 'border-red-500/50 shadow-[0_0_0_3px_rgba(239,68,68,0.12)]' : 'border-white/[0.1] focus-within:border-violet-500/60 focus-within:shadow-[0_0_0_3px_rgba(139,92,246,0.15)]'} bg-[#0f0f1a]`}>
@@ -96,7 +142,7 @@ export function HomeHero() {
               </div>
               <div className="px-2 py-2 sm:py-0 sm:flex sm:items-center">
                 <button onClick={handleSubmit} disabled={loading} className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-sm font-medium shadow-lg shadow-violet-500/25 hover:shadow-violet-500/35 transition-all duration-200 active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed">
-                  {loading ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Opening report...</> : <>Analyze free<ArrowRight className="w-4 h-4" /></>}
+                  {loading ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Opening report...</> : <>{isAuthenticated ? 'Analyze now' : 'Analyze free'}<ArrowRight className="w-4 h-4" /></>}
                 </button>
               </div>
             </div>
