@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { HomeHero } from '@/components/sections/home-hero';
 import { FeatureGrid } from '@/components/sections/feature-grid';
+import { HomeProductProof } from '@/components/sections/home-product-proof';
 import { HomeBlocks } from '@/components/sections/home-blocks';
 import { HomePricing } from '@/components/sections/home-pricing';
 
@@ -52,6 +53,7 @@ export default function HomePage() {
             Seen a suspicious number? →
           </Link>
         </div>
+        <HomeProductProof />
         <FeatureGrid />
         <HomeBlocks />
         <HomePricing />
