@@ -6,6 +6,7 @@ import { HomeHero } from '@/components/sections/home-hero';
 import { FeatureGrid } from '@/components/sections/feature-grid';
 import { HomeBlocks } from '@/components/sections/home-blocks';
 import { HomePricing } from '@/components/sections/home-pricing';
+import { ScamPlaybooksShowcase } from '@/components/sections/scam-playbooks-showcase';
 
 export const metadata: Metadata = {
   title: 'FilterCalls — Call Intelligence OS',
@@ -54,6 +55,7 @@ export default function HomePage() {
         </div>
         <FeatureGrid />
         <HomeBlocks />
+        <ScamPlaybooksShowcase />
         <HomePricing />
       </main>
       <SiteFooter />
