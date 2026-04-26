@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, BookOpenCheck, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, BookOpenCheck, Layers3, ShieldCheck, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { scamPatterns } from '@/lib/scams/patterns';
 import type { ScamPatternRecommendedAction, ScamPatternRiskTier } from '@/lib/scams/patterns';
@@ -41,7 +41,19 @@ const ACTION_STYLES: Record<ScamPatternRecommendedAction, string> = {
   answer_cautiously: 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100'
 };
 
+const RISK_ORDER: Record<ScamPatternRiskTier, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3
+};
+
+const sortedPatterns = [...scamPatterns].sort((left, right) => RISK_ORDER[left.riskTier] - RISK_ORDER[right.riskTier] || left.shortTitle.localeCompare(right.shortTitle));
+
 export default function ScamsPage() {
+  const criticalCount = scamPatterns.filter((pattern) => pattern.riskTier === 'critical').length;
+  const highCount = scamPatterns.filter((pattern) => pattern.riskTier === 'high').length;
+
   return (
     <section className="space-y-12">
       <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] p-6 shadow-glow sm:p-8 lg:p-10">
@@ -49,12 +61,12 @@ export default function ScamsPage() {
         <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
           <div className="max-w-3xl space-y-5">
             <p className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-cyan-100">
-              <Sparkles className="h-3.5 w-3.5" /> Scam Call Playbooks
+              <Sparkles className="h-3.5 w-3.5" /> {scamPatterns.length} scam call playbooks
             </p>
             <div className="space-y-4">
               <h1 className="text-4xl font-semibold tracking-tight text-white md:text-6xl">Learn the pattern. Know what to say. Verify safely.</h1>
               <p className="max-w-2xl text-sm leading-7 text-white/58 md:text-base">
-                FilterCalls playbooks are practical safety guides for suspicious calls. Each one shows what the caller may say, what it really means, what not to share, and the safest verification path.
+                FilterCalls playbooks are practical safety guides for suspicious calls. Each one breaks down the caller script, pressure tactics, what not to share, and the safest verification path.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -62,7 +74,7 @@ export default function ScamsPage() {
                 Analyze a suspicious number <ArrowRight className="h-4 w-4" />
               </Link>
               <Link href="/security" className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.08]">
-                Security model
+                How FilterCalls makes decisions
               </Link>
             </div>
           </div>
@@ -73,12 +85,18 @@ export default function ScamsPage() {
                 <BookOpenCheck className="h-6 w-6" />
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-white">Decision-first safety</h2>
-                <p className="mt-2 text-sm leading-6 text-white/55">These are not generic articles. Every playbook includes a best action, safe responses, do-not-share items, red flags, and verification steps.</p>
+                <h2 className="text-xl font-semibold text-white">Call scam intelligence</h2>
+                <p className="mt-2 text-sm leading-6 text-white/55">These are not generic articles. Each playbook is structured around the caller’s goal, pressure pattern, safe response, and verification route.</p>
               </div>
-              <div className="grid gap-2 text-sm text-white/60">
-                <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-200" /> No legal claims or official-authority guidance.</p>
-                <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-emerald-200" /> Practical scripts you can use before engaging.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-red-300/15 bg-red-300/[0.06] p-3">
+                  <p className="text-2xl font-semibold text-red-100">{criticalCount}</p>
+                  <p className="text-xs text-white/45">Critical playbooks</p>
+                </div>
+                <div className="rounded-2xl border border-orange-300/15 bg-orange-300/[0.06] p-3">
+                  <p className="text-2xl font-semibold text-orange-100">{highCount}</p>
+                  <p className="text-xs text-white/45">High-risk playbooks</p>
+                </div>
               </div>
             </div>
           </Card>
@@ -86,19 +104,20 @@ export default function ScamsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {scamPatterns.map((pattern) => (
+        {sortedPatterns.map((pattern) => (
           <Card key={pattern.slug} className="group flex flex-col justify-between gap-5 border border-white/10 bg-white/[0.03] transition hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[0.055]">
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 <span className={`rounded-full border px-3 py-1 text-xs font-medium capitalize ${RISK_STYLES[pattern.riskTier]}`}>{pattern.riskTier} risk</span>
                 <span className={`rounded-full border px-3 py-1 text-xs font-medium ${ACTION_STYLES[pattern.recommendedAction]}`}>{ACTION_LABELS[pattern.recommendedAction]}</span>
+                {pattern.scamLifecycle ? <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-medium text-cyan-100">Lifecycle map</span> : null}
               </div>
               <div>
                 <h2 className="text-2xl font-semibold text-white">{pattern.shortTitle}</h2>
                 <p className="mt-3 text-sm leading-6 text-white/55">{pattern.summary}</p>
               </div>
               <div className="grid gap-2 text-sm text-white/55">
-                <p><span className="font-medium text-white/80">Threat goal:</span> {pattern.pressureTactics.slice(0, 2).join(' · ')}</p>
+                <p><span className="font-medium text-white/80">Goal:</span> {pattern.scamGoal ?? pattern.pressureTactics.slice(0, 2).join(' · ')}</p>
                 <p><span className="font-medium text-white/80">Never share:</span> {pattern.doNotShare.slice(0, 3).join(', ')}</p>
               </div>
             </div>
@@ -112,13 +131,13 @@ export default function ScamsPage() {
       <Card className="border border-violet-300/20 bg-violet-400/[0.05]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-violet-100">Use with FilterCalls analysis</p>
+            <p className="flex items-center gap-2 text-sm font-medium uppercase tracking-[0.18em] text-violet-100"><Layers3 className="h-4 w-4" /> Use with FilterCalls analysis</p>
             <h2 className="mt-2 text-2xl font-semibold text-white">Got an unknown number right now?</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">Analyze the number, then use these playbooks to understand the likely tactic and the safest response.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">Analyze the number, then use these playbooks to understand the likely tactic, the safest response, and the right verification path.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/analysis" className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:opacity-90">Analyze a suspicious number</Link>
-            <Link href="/privacy" className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.08]">Privacy-first approach</Link>
+            <Link href="/privacy" className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.08]"><ShieldCheck className="h-4 w-4" /> Privacy-first approach</Link>
           </div>
         </div>
       </Card>

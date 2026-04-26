@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowRight, CheckCircle2, ShieldAlert, ShieldCheck, Siren } from 'lucide-react';
+import { ArrowRight, CheckCircle2, PhoneCall, ShieldAlert, ShieldCheck, Siren, UserRoundSearch } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { getScamPattern, scamPatterns } from '@/lib/scams/patterns';
-import type { ScamPatternRecommendedAction, ScamPatternRiskTier } from '@/lib/scams/patterns';
+import type { ScamPatternRecommendedAction, ScamPatternRiskTier, ScamPressureLevel } from '@/lib/scams/patterns';
 
 const baseUrl = 'https://filtercalls.com';
 
@@ -47,6 +47,19 @@ const ACTION_STYLES: Record<ScamPatternRecommendedAction, string> = {
   send_to_voicemail: 'border-orange-300/20 bg-orange-300/10 text-orange-100',
   verify_first: 'border-amber-300/20 bg-amber-300/10 text-amber-100',
   answer_cautiously: 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100'
+};
+
+const PRESSURE_STYLES: Record<ScamPressureLevel, { label: string; track: string; bar: string; width: string; text: string }> = {
+  low: { label: 'Low', track: 'bg-emerald-950/50', bar: 'bg-emerald-300', width: 'w-1/4', text: 'text-emerald-100' },
+  medium: { label: 'Medium', track: 'bg-amber-950/50', bar: 'bg-amber-300', width: 'w-1/2', text: 'text-amber-100' },
+  high: { label: 'High', track: 'bg-orange-950/50', bar: 'bg-orange-300', width: 'w-3/4', text: 'text-orange-100' },
+  critical: { label: 'Critical', track: 'bg-red-950/50', bar: 'bg-red-300', width: 'w-full', text: 'text-red-100' }
+};
+
+const LIFECYCLE_TONES: Record<'neutral' | 'warning' | 'danger', string> = {
+  neutral: 'border-cyan-300/20 bg-cyan-300/10 text-cyan-50',
+  warning: 'border-amber-300/20 bg-amber-300/10 text-amber-50',
+  danger: 'border-red-300/20 bg-red-300/10 text-red-50'
 };
 
 type PageProps = {
@@ -103,6 +116,22 @@ const BulletList = ({ items, tone = 'neutral' }: { items: string[]; tone?: 'neut
   );
 };
 
+const PressureRow = ({ label, value }: { label: string; value: ScamPressureLevel }) => {
+  const styles = PRESSURE_STYLES[value];
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-sm text-white/60">{label}</p>
+        <p className={`text-xs font-semibold uppercase tracking-[0.12em] ${styles.text}`}>{styles.label}</p>
+      </div>
+      <div className={`h-2 overflow-hidden rounded-full ${styles.track}`}>
+        <div className={`h-full rounded-full ${styles.bar} ${styles.width}`} />
+      </div>
+    </div>
+  );
+};
+
 export default function ScamPatternPage({ params }: PageProps) {
   const pattern = getScamPattern(params.slug);
   if (!pattern) notFound();
@@ -144,6 +173,44 @@ export default function ScamPatternPage({ params }: PageProps) {
         </div>
       </div>
 
+      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+        <Card className="border border-white/10 bg-white/[0.03]">
+          <h2 className="text-2xl font-semibold text-white">Scam anatomy</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-white/35">Goal</p>
+              <p className="mt-2 text-sm leading-6 text-white/62">{pattern.scamGoal ?? pattern.summary}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-white/35">Main pressure</p>
+              <p className="mt-2 text-sm leading-6 text-white/62">{pattern.pressureTactics[0] ?? 'Caller pressure'}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-white/35">Recommended action</p>
+              <p className={`mt-2 text-sm font-semibold ${riskStyles.text}`}>{ACTION_LABELS[pattern.recommendedAction]}</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-white/35">Risk tier</p>
+              <p className={`mt-2 text-sm font-semibold capitalize ${riskStyles.text}`}>{pattern.riskTier}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="border border-white/10 bg-white/[0.03]">
+          <h2 className="text-2xl font-semibold text-white">Pressure meter</h2>
+          {pattern.pressureMeter ? (
+            <div className="mt-5 space-y-4">
+              <PressureRow label="Urgency" value={pattern.pressureMeter.urgency} />
+              <PressureRow label="Authority pressure" value={pattern.pressureMeter.authority} />
+              <PressureRow label="Money risk" value={pattern.pressureMeter.moneyRisk} />
+              <PressureRow label="Identity risk" value={pattern.pressureMeter.identityRisk} />
+            </div>
+          ) : (
+            <p className="mt-4 text-sm leading-6 text-white/55">This playbook relies on the risk tier, pressure tactics, and red flags below to describe caller pressure.</p>
+          )}
+        </Card>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title="How this scam works">
           <BulletList items={pattern.howItWorks} />
@@ -170,6 +237,37 @@ export default function ScamPatternPage({ params }: PageProps) {
           ))}
         </div>
       </Section>
+
+      {pattern.scamLifecycle ? (
+        <Section title="How this scam unfolds">
+          <div className="grid gap-3 md:grid-cols-5">
+            {pattern.scamLifecycle.map((stage, index) => (
+              <div key={stage.stage} className={`rounded-2xl border p-4 ${LIFECYCLE_TONES[stage.tone]}`}>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">Step {index + 1}</p>
+                <h3 className="mt-2 text-base font-semibold">{stage.stage}</h3>
+                <p className="mt-2 text-sm leading-6 opacity-75">{stage.description}</p>
+              </div>
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
+      {pattern.callerProfile ? (
+        <Card className="border border-violet-300/20 bg-violet-400/[0.045]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium uppercase tracking-[0.18em] text-violet-100"><UserRoundSearch className="h-4 w-4" /> Caller psychological profile</p>
+              <h2 className="mt-2 text-2xl font-semibold text-white">Understand the role they are playing</h2>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-4">
+            <div className="rounded-2xl border border-white/10 bg-black/10 p-4"><p className="text-xs uppercase tracking-[0.18em] text-white/35">Role</p><p className="mt-2 text-sm leading-6 text-white/65">{pattern.callerProfile.role}</p></div>
+            <div className="rounded-2xl border border-white/10 bg-black/10 p-4"><p className="text-xs uppercase tracking-[0.18em] text-white/35">Exploits</p><p className="mt-2 text-sm leading-6 text-white/65">{pattern.callerProfile.exploits}</p></div>
+            <div className="rounded-2xl border border-white/10 bg-black/10 p-4"><p className="text-xs uppercase tracking-[0.18em] text-white/35">Weakness</p><p className="mt-2 text-sm leading-6 text-white/65">{pattern.callerProfile.weakness}</p></div>
+            <div className="rounded-2xl border border-white/10 bg-black/10 p-4"><p className="text-xs uppercase tracking-[0.18em] text-white/35">Emotional lever</p><p className="mt-2 text-sm leading-6 text-white/65">{pattern.callerProfile.emotionalLever}</p></div>
+          </div>
+        </Card>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Section title="Pressure tactics">
@@ -212,6 +310,17 @@ export default function ScamPatternPage({ params }: PageProps) {
             ))}
           </ol>
         </Section>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="border border-cyan-300/20 bg-cyan-400/[0.05]">
+          <p className="flex items-center gap-2 text-sm font-medium uppercase tracking-[0.18em] text-cyan-100"><PhoneCall className="h-4 w-4" /> Safe callback rule</p>
+          <p className="mt-3 text-sm leading-6 text-white/65">Never verify the caller using the number that contacted you. Use an official app, official website, statement, saved contact, or a number you already trusted before the call.</p>
+        </Card>
+        <Card className="border border-emerald-300/20 bg-emerald-400/[0.05]">
+          <p className="text-sm font-medium uppercase tracking-[0.18em] text-emerald-100">Protect someone else</p>
+          <p className="mt-3 text-sm leading-6 text-white/65">If this call could target a parent, grandparent, coworker, or friend, share the safe response and verification steps. A short pause can prevent a fast mistake.</p>
+        </Card>
       </div>
 
       <Card className="border border-cyan-300/20 bg-cyan-400/[0.05]">
