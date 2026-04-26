@@ -312,6 +312,51 @@ export default function ScamPatternPage({ params }: PageProps) {
         </Section>
       </div>
 
+      <Card className="border border-cyan-300/20 bg-cyan-400/[0.05]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.18em] text-cyan-100">When FilterCalls detects this pattern</p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">Recommended protection flow</h2>
+          </div>
+          <Link href="/analysis" className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:opacity-90">
+            Analyze a suspicious number <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-white/35">FilterCalls typically recommends</p>
+            <p className={`mt-2 text-sm font-semibold ${riskStyles.text}`}>{ACTION_LABELS[pattern.recommendedAction]}</p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-white/35">Safe response</p>
+            <p className="mt-2 text-sm leading-6 text-white/65">“{pattern.safeResponses[0] ?? 'Verify independently before sharing any details.'}”</p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-white/35">Do not share</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {pattern.doNotShare.slice(0, 4).map((item) => (
+                <span key={item} className="rounded-full border border-red-300/20 bg-red-300/10 px-2.5 py-1 text-xs text-red-100">{item}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-white/35">Verify through</p>
+            <ol className="mt-2 space-y-2">
+              {pattern.verificationSteps.slice(0, 2).map((step, index) => (
+                <li key={step} className="flex gap-2 text-sm leading-6 text-white/65">
+                  <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-slate-950 ${riskStyles.dot}`}>{index + 1}</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border border-cyan-300/20 bg-cyan-400/[0.05]">
           <p className="flex items-center gap-2 text-sm font-medium uppercase tracking-[0.18em] text-cyan-100"><PhoneCall className="h-4 w-4" /> Safe callback rule</p>
