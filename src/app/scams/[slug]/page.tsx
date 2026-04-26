@@ -5,6 +5,7 @@ import { ArrowRight, CheckCircle2, PhoneCall, ShieldAlert, ShieldCheck, Siren, U
 import { Card } from '@/components/ui/card';
 import { getScamPattern, scamPatterns } from '@/lib/scams/patterns';
 import type { ScamPatternRecommendedAction, ScamPatternRiskTier, ScamPressureLevel } from '@/lib/scams/patterns';
+import { getScamDetailSchema } from '@/lib/scams/schema';
 
 const baseUrl = 'https://filtercalls.com';
 
@@ -138,9 +139,37 @@ export default function ScamPatternPage({ params }: PageProps) {
 
   const riskStyles = RISK_STYLES[pattern.riskTier];
   const relatedPatterns = pattern.relatedScams.map(getScamPattern).filter((item): item is NonNullable<ReturnType<typeof getScamPattern>> => Boolean(item));
+  const detailSchema = getScamDetailSchema(pattern.slug);
 
   return (
     <section className="space-y-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: detailSchema }} />
+
+      <Card className="what-to-do-now border border-cyan-300/20 bg-cyan-400/[0.05]">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cyan-100">What is happening?</p>
+            <p className="mt-2 text-sm leading-6 text-white/65">{pattern.summary}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cyan-100">What are they trying to get?</p>
+            <p className="mt-2 text-sm leading-6 text-white/65">{pattern.scamGoal ?? pattern.pressureTactics[0] ?? 'Sensitive information or urgent payment.'}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cyan-100">What should I do?</p>
+            <p className={`mt-2 text-sm font-semibold ${riskStyles.text}`}>{ACTION_LABELS[pattern.recommendedAction]}</p>
+          </div>
+          <div className="protection-guidance">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cyan-100">What should I not share?</p>
+            <p className="mt-2 text-sm leading-6 text-white/65">{pattern.doNotShare.slice(0, 4).join(', ')}</p>
+          </div>
+        </div>
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/10 p-4">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">How do I verify?</p>
+          <p className="mt-2 text-sm leading-6 text-white/65">{pattern.verificationSteps[0] ?? pattern.bestNextStep}</p>
+        </div>
+      </Card>
+
       <div className={`relative overflow-hidden rounded-3xl border p-6 shadow-glow sm:p-8 lg:p-10 ${riskStyles.panel}`}>
         <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/10 via-white/[0.02] to-transparent" />
         <div className="relative grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
