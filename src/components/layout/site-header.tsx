@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Zap, LogOut } from 'lucide-react';
+import { getHeaderRoutes } from '@/lib/navigation/product-routes';
 
 type PortalMe = {
   id: string;
@@ -13,20 +15,12 @@ type PortalMe = {
   plan?: { usage?: { analyses_remaining?: number } };
 };
 
-const NAV_LINKS: { label: string; href: string }[] = [
-  { label: 'Features', href: '/#features' },
-  { label: 'Playbooks', href: '/scams' },
-  { label: 'Pricing', href: '/pricing' },
-  { label: 'Solutions', href: '/solutions' },
-  { label: 'Insights', href: '/insights' },
-  { label: 'Changelog', href: '/changelog' },
-  { label: 'Security', href: '/security' },
-];
-
 const COMPANY_LINKS: { label: string; href: string }[] = [
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
 ];
+
+const navLabel = (link: { label?: string; headerLabel?: string }) => link.headerLabel ?? link.label ?? '';
 
 const initialsFromUser = (user: PortalMe | null) => {
   const source = user?.full_name?.trim() || user?.email || 'FC';
@@ -36,6 +30,7 @@ const initialsFromUser = (user: PortalMe | null) => {
 };
 
 export function SiteHeader() {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [user, setUser] = useState<PortalMe | null>(null);
@@ -96,6 +91,8 @@ export function SiteHeader() {
   };
 
   const remaining = user?.plan?.usage?.analyses_remaining;
+  const headerRoutes = getHeaderRoutes();
+  const isActiveRoute = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
 
   return (
     <>
@@ -117,14 +114,18 @@ export function SiteHeader() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
-            {[...NAV_LINKS, ...COMPANY_LINKS].map((link) => (
-              <a
+            {[...headerRoutes, ...COMPANY_LINKS].map((link) => (
+              <Link
                 key={link.href}
                 href={link.href}
-                className="px-3.5 py-2 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/[0.06] transition-all duration-150"
+                className={`px-3.5 py-2 text-sm rounded-lg transition-all duration-150 ${
+                  isActiveRoute(link.href)
+                    ? 'text-white bg-white/[0.08]'
+                    : 'text-white/60 hover:text-white hover:bg-white/[0.06]'
+                }`}
               >
-                {link.label}
-              </a>
+                {navLabel(link)}
+              </Link>
             ))}
           </nav>
 
@@ -223,15 +224,17 @@ export function SiteHeader() {
               </div>
 
               <nav className="flex flex-col gap-1 p-4 flex-1">
-                {NAV_LINKS.map((link) => (
-                  <a
+                {headerRoutes.map((link) => (
+                  <Link
                     key={link.href}
                     href={link.href}
                     onClick={() => setDrawerOpen(false)}
-                    className="px-4 py-3 text-sm text-white/70"
+                    className={`px-4 py-3 text-sm ${
+                      isActiveRoute(link.href) ? 'text-white bg-white/[0.08] rounded-lg' : 'text-white/70'
+                    }`}
                   >
-                    {link.label}
-                  </a>
+                    {link.headerLabel}
+                  </Link>
                 ))}
 
                 <div className="my-2 border-t border-white/10" />
@@ -241,18 +244,25 @@ export function SiteHeader() {
                 </p>
 
                 {COMPANY_LINKS.map((link) => (
-                  <a
+                  <Link
                     key={link.href}
                     href={link.href}
                     onClick={() => setDrawerOpen(false)}
                     className="px-4 py-3 text-sm text-white/70"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 ))}
               </nav>
 
-              <div className="flex flex-col gap-3 p-4 border-t border-white/10">
+              <div className="mt-auto sticky bottom-0 flex flex-col gap-3 border-t border-white/10 bg-[#0f0f18] p-4">
+                <Link
+                  href={'/analysis' as Route}
+                  onClick={() => setDrawerOpen(false)}
+                  className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-3 text-sm font-medium text-white"
+                >
+                  Analyze now →
+                </Link>
                 {user ? (
                   <>
                     <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/75">
