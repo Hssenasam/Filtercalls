@@ -1,13 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Clipboard, Copy, Eye, ListChecks, Route, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { buildAICallDecision } from '@/lib/decision';
 import type { AICallDecision, AICallDecisionInput, CallDecisionRiskTier } from '@/lib/decision';
 import type { CallIntentAnalysis } from '@/lib/engine/types';
-import { getScamPattern } from '@/lib/scams/patterns';
-import { matchPlaybooks } from '@/lib/scams/match-playbooks';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -163,14 +160,6 @@ export const AICallDecisionCard = ({ result }: { result: CallIntentAnalysis }) =
   const score = callSafetyScore(result, decision.riskTier);
   const oneLineReason = decision.reasons.slice(0, 3).join(' · ');
   const path = verificationPath(decision);
-  const playbookMatches = matchPlaybooks(decision).reduce<Array<ReturnType<typeof matchPlaybooks>[number] & {
-    pattern: NonNullable<ReturnType<typeof getScamPattern>>;
-  }>>((acc, match) => {
-    const pattern = getScamPattern(match.slug);
-    if (!pattern) return acc;
-    acc.push({ ...match, pattern });
-    return acc;
-  }, []);
 
   const handleCopy = async () => {
     try {
@@ -305,52 +294,6 @@ export const AICallDecisionCard = ({ result }: { result: CallIntentAnalysis }) =
         </details>
 
         <p className="text-xs leading-5 text-white/35">{decision.disclaimer} Guidance is deterministic and based on risk signals, trust score, line type, probable intent, and available analysis signals.</p>
-
-        {playbookMatches.length > 0 ? (
-          <details className="group rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-white">
-              <span>This call pattern resembles:</span>
-              <span className="text-xs text-white/40 group-open:hidden">Show</span>
-              <span className="text-xs text-white/40 hidden group-open:inline">Hide</span>
-            </summary>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {playbookMatches.slice(0, 2).map((match) => (
-                <article key={match.slug} className="rounded-2xl border border-white/10 bg-black/15 p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="text-sm font-semibold text-white">{match.pattern.shortTitle}</h4>
-                    <span
-                      className={cn(
-                        'rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                        match.matchStrength === 'strong'
-                          ? 'border-amber-300/25 bg-amber-300/10 text-amber-100'
-                          : 'border-slate-300/25 bg-slate-300/10 text-slate-100'
-                      )}
-                    >
-                      {match.matchStrength === 'strong' ? 'Strong match' : 'Possible match'}
-                    </span>
-                  </div>
-
-                  <p className="mt-2 text-sm leading-6 text-white/62">{match.pattern.pressureTactics[0] ?? match.pattern.summary}</p>
-
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between text-xs text-white/55">
-                      <span>Scam confidence score</span>
-                      <span>{match.matchScore}%</span>
-                    </div>
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
-                      <div className={cn('h-full rounded-full', match.matchStrength === 'strong' ? 'bg-amber-300' : 'bg-slate-300')} style={{ width: `${match.matchScore}%` }} />
-                    </div>
-                  </div>
-
-                  <Link href={`/scams/${match.slug}`} className="mt-4 inline-flex text-xs font-semibold text-cyan-100 transition hover:text-white">
-                    View playbook →
-                  </Link>
-                </article>
-              ))}
-            </div>
-          </details>
-        ) : null}
       </div>
     </section>
   );

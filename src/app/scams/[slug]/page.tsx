@@ -5,7 +5,6 @@ import { ArrowRight, CheckCircle2, PhoneCall, ShieldAlert, ShieldCheck, Siren, U
 import { Card } from '@/components/ui/card';
 import { getScamPattern, scamPatterns } from '@/lib/scams/patterns';
 import type { ScamPatternRecommendedAction, ScamPatternRiskTier, ScamPressureLevel } from '@/lib/scams/patterns';
-import { getScamDetailSchema } from '@/lib/scams/schema';
 
 const baseUrl = 'https://filtercalls.com';
 
@@ -139,37 +138,9 @@ export default function ScamPatternPage({ params }: PageProps) {
 
   const riskStyles = RISK_STYLES[pattern.riskTier];
   const relatedPatterns = pattern.relatedScams.map(getScamPattern).filter((item): item is NonNullable<ReturnType<typeof getScamPattern>> => Boolean(item));
-  const detailSchema = getScamDetailSchema(pattern.slug);
 
   return (
     <section className="space-y-10">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: detailSchema }} />
-
-      <Card className="what-to-do-now border border-cyan-300/20 bg-cyan-400/[0.05]">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cyan-100">What is happening?</p>
-            <p className="mt-2 text-sm leading-6 text-white/65">{pattern.summary}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cyan-100">What are they trying to get?</p>
-            <p className="mt-2 text-sm leading-6 text-white/65">{pattern.scamGoal ?? pattern.pressureTactics[0] ?? 'Sensitive information or urgent payment.'}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cyan-100">What should I do?</p>
-            <p className={`mt-2 text-sm font-semibold ${riskStyles.text}`}>{ACTION_LABELS[pattern.recommendedAction]}</p>
-          </div>
-          <div className="protection-guidance">
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-cyan-100">What should I not share?</p>
-            <p className="mt-2 text-sm leading-6 text-white/65">{pattern.doNotShare.slice(0, 4).join(', ')}</p>
-          </div>
-        </div>
-        <div className="mt-4 rounded-2xl border border-white/10 bg-black/10 p-4">
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/35">How do I verify?</p>
-          <p className="mt-2 text-sm leading-6 text-white/65">{pattern.verificationSteps[0] ?? pattern.bestNextStep}</p>
-        </div>
-      </Card>
-
       <div className={`relative overflow-hidden rounded-3xl border p-6 shadow-glow sm:p-8 lg:p-10 ${riskStyles.panel}`}>
         <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/10 via-white/[0.02] to-transparent" />
         <div className="relative grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
@@ -340,51 +311,6 @@ export default function ScamPatternPage({ params }: PageProps) {
           </ol>
         </Section>
       </div>
-
-      <Card className="border border-cyan-300/20 bg-cyan-400/[0.05]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-cyan-100">When FilterCalls detects this pattern</p>
-            <h2 className="mt-2 text-2xl font-semibold text-white">Recommended protection flow</h2>
-          </div>
-          <Link href="/analysis" className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:opacity-90">
-            Analyze a suspicious number <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-white/35">FilterCalls typically recommends</p>
-            <p className={`mt-2 text-sm font-semibold ${riskStyles.text}`}>{ACTION_LABELS[pattern.recommendedAction]}</p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-white/35">Safe response</p>
-            <p className="mt-2 text-sm leading-6 text-white/65">“{pattern.safeResponses[0] ?? 'Verify independently before sharing any details.'}”</p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-white/35">Do not share</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {pattern.doNotShare.slice(0, 4).map((item) => (
-                <span key={item} className="rounded-full border border-red-300/20 bg-red-300/10 px-2.5 py-1 text-xs text-red-100">{item}</span>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-white/35">Verify through</p>
-            <ol className="mt-2 space-y-2">
-              {pattern.verificationSteps.slice(0, 2).map((step, index) => (
-                <li key={step} className="flex gap-2 text-sm leading-6 text-white/65">
-                  <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-slate-950 ${riskStyles.dot}`}>{index + 1}</span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </div>
-      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border border-cyan-300/20 bg-cyan-400/[0.05]">
