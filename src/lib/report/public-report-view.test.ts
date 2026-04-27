@@ -26,9 +26,10 @@ test('parseViewMode supports recipient and defaults to owner', () => {
   assert.equal(parsePublicReportViewMode('other'), 'owner');
 });
 
-test('recipient model masks number and keeps safety guidance', () => {
+test('recipient model masks report preview and keeps safety guidance', () => {
   const view = buildRecipientReportView(baseSummary);
-  assert.equal(view.maskedNumber, '···8A91');
+  assert.equal(view.maskedNumber, 'Report preview •••91');
+  assert.equal(view.maskedNumber.includes('8A91'), false);
   assert.ok(view.doNotShare.length >= 3);
   assert.ok(view.warningBanner.length > 0);
 });
