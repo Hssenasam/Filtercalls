@@ -46,6 +46,16 @@ const warningBannerForRisk = (risk: RiskLabel, hasData: boolean): string => {
   return 'No significant risk signals detected, but always keep basic call safety.';
 };
 
+const maskedReportPreview = (preview: string | null) => {
+  if (!preview) return 'Hidden number';
+
+  const normalized = preview.replace(/[^a-z0-9]/gi, '').toUpperCase();
+  if (!normalized) return 'Hidden number';
+
+  const suffix = normalized.slice(-2).padStart(2, '•');
+  return `Report preview •••${suffix}`;
+};
+
 export function parsePublicReportViewMode(input: string | string[] | undefined): PublicReportViewMode {
   const value = Array.isArray(input) ? input[0] : input;
   return value === 'recipient' ? 'recipient' : 'owner';
@@ -87,7 +97,7 @@ export function buildRecipientReportView(summary: ReputationSummary): RecipientR
   return {
     warningLevel,
     warningBanner: warningBannerForRisk(summary.risk_label, hasData),
-    maskedNumber: summary.number_hash_preview ? `···${summary.number_hash_preview}` : 'Hidden number',
+    maskedNumber: maskedReportPreview(summary.number_hash_preview),
     recommendedAction,
     whatToDoNow,
     whatTheyMayAskFor: ['Urgent payment or transfer', 'Verification code confirmation', 'Account reset approval', 'Identity details for "verification"'],
