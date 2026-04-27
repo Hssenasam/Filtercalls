@@ -3,7 +3,10 @@ import type { Metadata } from 'next';
 import { ShieldCheck, Activity, Globe2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { ShareActions } from '@/components/reputation/share-actions';
+import { SharePanel } from '@/components/report/share-panel';
+import { RecipientReportView } from '@/components/report/recipient-report-view';
 import type { ReputationSummary, RiskLabel } from '@/lib/reputation/types';
+import { buildRecipientReportView, parsePublicReportViewMode } from '@/lib/report/public-report-view';
 
 export const runtime = 'edge';
 
@@ -165,10 +168,17 @@ export async function generateMetadata({ params }: { params: { hash: string } })
   };
 }
 
-export default async function PublicReportPage({ params }: { params: { hash: string } }) {
+export default async function PublicReportPage({
+  params,
+  searchParams
+}: {
+  params: { hash: string };
+  searchParams?: { view?: string | string[] };
+}) {
   const summary = await getSummary(params.hash);
   const hasData = summary.has_community_data && summary.total > 0;
   const url = `${SITE_URL}/report/${params.hash}`;
+  const recipientUrl = `${url}?view=recipient`;
   const tone = riskTone(hasData ? summary.risk_label : null);
   const maxActivity = Math.max(1, ...summary.activity_7d.map((point) => point.count));
   const nonZeroCategories = Object.entries(summary.breakdown).filter(([, count]) => count > 0);
@@ -176,6 +186,10 @@ export default async function PublicReportPage({ params }: { params: { hash: str
   const severityRows = (['critical', 'high', 'medium', 'low'] as const).map((level) => ({ level, count: summary.severity[level] ?? 0 })).filter((row) => row.count > 0);
   const maxSeverityCount = Math.max(1, ...severityRows.map((row) => row.count));
   const action = recommendedAction(summary);
+  const recipientView = buildRecipientReportView(summary);
+  const safetyMessage = `I checked this caller on FilterCalls. Review this safety view before you respond: ${recipientUrl}`;
+
+  const viewMode = parsePublicReportViewMode(searchParams?.view);
 
   const jsonLd = hasData
     ? {
@@ -199,6 +213,25 @@ export default async function PublicReportPage({ params }: { params: { hash: str
       }
     }
     : null;
+
+  if (viewMode === 'recipient') {
+    return (
+      <section className="space-y-8">
+        <RecipientReportView view={recipientView} />
+        <Card className="space-y-4 border border-white/10 bg-white/[0.03]">
+          <h2 className="text-xl font-semibold text-white">Need deeper analysis?</h2>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link href={url} className="inline-flex justify-center rounded-xl border border-white/15 bg-white/[0.05] px-5 py-3 text-sm font-medium text-white/80">
+              Open full owner report
+            </Link>
+            <Link href="/analysis" className="inline-flex justify-center rounded-xl bg-violet-600 px-5 py-3 text-sm font-medium text-white">
+              Analyze another number →
+            </Link>
+          </div>
+        </Card>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-8">
@@ -328,6 +361,7 @@ export default async function PublicReportPage({ params }: { params: { hash: str
       <Card className="space-y-4 border border-white/10 bg-white/[0.03]">
         <h2 className="text-xl font-semibold text-white">Share this public report</h2>
         <ShareActions url={url} />
+        <SharePanel reportUrl={url} safetyMessage={safetyMessage} />
       </Card>
 
       <div className="flex flex-col gap-3 sm:flex-row">
