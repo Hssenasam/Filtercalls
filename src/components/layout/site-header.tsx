@@ -1,16 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Zap, LogOut } from 'lucide-react';
+import { Menu, X, Zap, LogOut, Shield, UserCircle2, Settings, KeyRound, CreditCard } from 'lucide-react';
 
 type PortalMe = {
   id: string;
   email: string;
   full_name?: string | null;
-  plan?: { usage?: { analyses_remaining?: number } };
+  plan?: {
+    label?: string;
+    limits?: { monthlyAnalyses?: number };
+    usage?: {
+      analyses_used?: number;
+      analyses_remaining?: number;
+    };
+  };
 };
 
 const NAV_LINKS: { label: string; href: string }[] = [
@@ -38,9 +45,11 @@ const initialsFromUser = (user: PortalMe | null) => {
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [user, setUser] = useState<PortalMe | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -54,6 +63,15 @@ export function SiteHeader() {
       document.body.style.overflow = '';
     };
   }, [drawerOpen]);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handler = (event: MouseEvent) => {
+      if (!dropdownRef.current?.contains(event.target as Node)) setDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [dropdownOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,7 +113,8 @@ export function SiteHeader() {
     }
   };
 
-  const remaining = user?.plan?.usage?.analyses_remaining;
+  const remaining = user?.plan?.usage?.analyses_remaining ?? 0;
+  const planLabel = user?.plan?.label || 'Free';
 
   return (
     <>
@@ -132,17 +151,18 @@ export function SiteHeader() {
             {authLoading ? (
               <div className="h-10 w-40 rounded-xl bg-white/5 animate-pulse" />
             ) : user ? (
-              <>
-                <div className="hidden lg:flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/70">
-                  <span className="rounded-full bg-emerald-400/10 px-2 py-1 text-emerald-300">
-                    Logged in
-                  </span>
-                  <span>{remaining ?? 0} analyses left</span>
-                </div>
-
-                <Link
-                  href={'/portal/overview' as Route}
+              <div
+                ref={dropdownRef}
+                className="relative"
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') setDropdownOpen(false);
+                }}
+              >
+                <button
+                  onClick={() => setDropdownOpen((value) => !value)}
                   className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 hover:bg-white/[0.07] transition"
+                  aria-haspopup="menu"
+                  aria-expanded={dropdownOpen}
                 >
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-sm font-semibold text-white">
                     {initialsFromUser(user)}
@@ -151,20 +171,66 @@ export function SiteHeader() {
                     <span className="block text-sm font-medium text-white">
                       {user.full_name || 'My account'}
                     </span>
-                    <span className="block text-xs text-white/45">
-                      Open portal
+                    <span className="block text-xs text-white/55">
+                      {planLabel} · {remaining} analyses left
                     </span>
                   </span>
-                </Link>
-
-                <button
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                  className="px-3 py-2 text-sm text-white/70 hover:text-white rounded-lg hover:bg-white/[0.06] transition-all duration-150"
-                >
-                  {loggingOut ? 'Signing out...' : 'Sign out'}
                 </button>
-              </>
+
+                <AnimatePresence>
+                  {dropdownOpen ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="absolute right-0 top-[calc(100%+10px)] w-72 rounded-2xl border border-white/10 bg-[#11111b] p-2 shadow-2xl shadow-black/50"
+                      role="menu"
+                    >
+                      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
+                        <p className="text-sm font-medium text-white">{user.full_name || 'My account'}</p>
+                        <p className="mt-1 text-xs text-white/55 break-all">{user.email}</p>
+                        <div className="mt-2 flex items-center gap-2 text-[11px]">
+                          <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1 text-white/70">{planLabel}</span>
+                          <span className="text-white/60">{remaining} analyses left</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 grid gap-1 text-sm">
+                        {[
+                          { label: 'Overview', href: '/portal/overview', icon: UserCircle2 },
+                          { label: 'Profile', href: '/portal/profile', icon: UserCircle2 },
+                          { label: 'Settings', href: '/portal/settings', icon: Settings },
+                          { label: 'Security', href: '/portal/security', icon: Shield },
+                          { label: 'Billing', href: '/portal/billing', icon: CreditCard },
+                          { label: 'API Keys', href: '/portal/keys', icon: KeyRound },
+                        ].map(({ label, href, icon: Icon }) => (
+                          <Link
+                            key={href}
+                            href={href as Route}
+                            className="flex items-center justify-between rounded-xl px-3 py-2 text-white/80 hover:bg-white/[0.06] hover:text-white"
+                            role="menuitem"
+                            onClick={() => setDropdownOpen(false)}
+                          >
+                            <span>{label}</span>
+                            <Icon className="h-4 w-4 opacity-70" />
+                          </Link>
+                        ))}
+                      </div>
+
+                      <div className="mt-2 border-t border-white/10 pt-2">
+                        <button
+                          onClick={handleLogout}
+                          disabled={loggingOut}
+                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200 hover:bg-rose-500/15"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          {loggingOut ? 'Signing out...' : 'Sign out'}
+                        </button>
+                      </div>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </div>
             ) : (
               <>
                 <Link
@@ -260,17 +326,27 @@ export function SiteHeader() {
                         {user.full_name || user.email}
                       </p>
                       <p className="mt-1 text-xs text-white/50">
-                        {remaining ?? 0} analyses left this month
+                        {planLabel} · {remaining} analyses left this month
                       </p>
                     </div>
 
-                    <Link
-                      href={'/portal/overview' as Route}
-                      onClick={() => setDrawerOpen(false)}
-                      className="text-center text-white"
-                    >
-                      Open portal
-                    </Link>
+                    {[
+                      ['Overview', '/portal/overview'],
+                      ['Profile', '/portal/profile'],
+                      ['Settings', '/portal/settings'],
+                      ['Security', '/portal/security'],
+                      ['Billing', '/portal/billing'],
+                      ['API Keys', '/portal/keys'],
+                    ].map(([label, href]) => (
+                      <Link
+                        key={href}
+                        href={href as Route}
+                        onClick={() => setDrawerOpen(false)}
+                        className="text-center text-white/80"
+                      >
+                        {label}
+                      </Link>
+                    ))}
 
                     <button
                       onClick={handleLogout}
