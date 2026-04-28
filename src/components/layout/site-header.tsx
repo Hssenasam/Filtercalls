@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Zap, LogOut, Shield, UserCircle2, Settings, KeyRound, CreditCard } from 'lucide-react';
+import { getHeaderRoutes } from '@/lib/navigation/product-routes';
 
 type PortalMe = {
   id: string;
@@ -20,20 +22,12 @@ type PortalMe = {
   };
 };
 
-const NAV_LINKS: { label: string; href: string }[] = [
-  { label: 'Features', href: '/#features' },
-  { label: 'Playbooks', href: '/scams' },
-  { label: 'Pricing', href: '/pricing' },
-  { label: 'Solutions', href: '/solutions' },
-  { label: 'Insights', href: '/insights' },
-  { label: 'Changelog', href: '/changelog' },
-  { label: 'Security', href: '/security' },
-];
-
 const COMPANY_LINKS: { label: string; href: string }[] = [
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
 ];
+
+const navLabel = (link: { label?: string; headerLabel?: string }) => link.headerLabel ?? link.label ?? '';
 
 const initialsFromUser = (user: PortalMe | null) => {
   const source = user?.full_name?.trim() || user?.email || 'FC';
@@ -43,6 +37,7 @@ const initialsFromUser = (user: PortalMe | null) => {
 };
 
 export function SiteHeader() {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -66,11 +61,25 @@ export function SiteHeader() {
 
   useEffect(() => {
     if (!dropdownOpen) return;
-    const handler = (event: MouseEvent) => {
-      if (!dropdownRef.current?.contains(event.target as Node)) setDropdownOpen(false);
+
+    const onPointerDown = (event: MouseEvent) => {
+      if (!dropdownRef.current?.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, [dropdownOpen]);
 
   useEffect(() => {
@@ -115,6 +124,16 @@ export function SiteHeader() {
 
   const remaining = user?.plan?.usage?.analyses_remaining ?? 0;
   const planLabel = user?.plan?.label || 'Free';
+  const headerRoutes = getHeaderRoutes();
+  const isActiveRoute = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
+  const accountLinks = [
+    { label: 'Overview', href: '/portal/overview', icon: UserCircle2 },
+    { label: 'Profile', href: '/portal/profile', icon: UserCircle2 },
+    { label: 'Settings', href: '/portal/settings', icon: Settings },
+    { label: 'Security', href: '/portal/security', icon: Shield },
+    { label: 'Billing', href: '/portal/billing', icon: CreditCard },
+    { label: 'API Keys', href: '/portal/keys', icon: KeyRound },
+  ];
 
   return (
     <>
@@ -136,14 +155,18 @@ export function SiteHeader() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
-            {[...NAV_LINKS, ...COMPANY_LINKS].map((link) => (
-              <a
+            {[...headerRoutes, ...COMPANY_LINKS].map((link) => (
+              <Link
                 key={link.href}
                 href={link.href}
-                className="px-3.5 py-2 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/[0.06] transition-all duration-150"
+                className={`px-3.5 py-2 text-sm rounded-lg transition-all duration-150 ${
+                  isActiveRoute(link.href)
+                    ? 'text-white bg-white/[0.08]'
+                    : 'text-white/60 hover:text-white hover:bg-white/[0.06]'
+                }`}
               >
-                {link.label}
-              </a>
+                {navLabel(link)}
+              </Link>
             ))}
           </nav>
 
@@ -151,27 +174,22 @@ export function SiteHeader() {
             {authLoading ? (
               <div className="h-10 w-40 rounded-xl bg-white/5 animate-pulse" />
             ) : user ? (
-              <div
-                ref={dropdownRef}
-                className="relative"
-                onKeyDown={(event) => {
-                  if (event.key === 'Escape') setDropdownOpen(false);
-                }}
-              >
+              <div ref={dropdownRef} className="relative">
                 <button
+                  type="button"
                   onClick={() => setDropdownOpen((value) => !value)}
-                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 hover:bg-white/[0.07] transition"
+                  className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60"
                   aria-haspopup="menu"
                   aria-expanded={dropdownOpen}
                 >
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-sm font-semibold text-white">
                     {initialsFromUser(user)}
                   </span>
-                  <span className="hidden xl:block text-left">
-                    <span className="block text-sm font-medium text-white">
+                  <span className="hidden xl:block max-w-[150px] text-left">
+                    <span className="block truncate text-sm font-medium text-white">
                       {user.full_name || 'My account'}
                     </span>
-                    <span className="block text-xs text-white/55">
+                    <span className="block truncate text-xs text-white/60">
                       {planLabel} · {remaining} analyses left
                     </span>
                   </span>
@@ -183,31 +201,24 @@ export function SiteHeader() {
                       initial={{ opacity: 0, y: -6 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -6 }}
-                      className="absolute right-0 top-[calc(100%+10px)] w-72 rounded-2xl border border-white/10 bg-[#11111b] p-2 shadow-2xl shadow-black/50"
+                      className="absolute right-0 top-[calc(100%+10px)] z-[80] w-72 rounded-2xl border border-white/10 bg-[#11111b] p-2 shadow-2xl shadow-black/50"
                       role="menu"
                     >
                       <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
-                        <p className="text-sm font-medium text-white">{user.full_name || 'My account'}</p>
-                        <p className="mt-1 text-xs text-white/55 break-all">{user.email}</p>
+                        <p className="truncate text-sm font-medium text-white">{user.full_name || 'My account'}</p>
+                        <p className="mt-1 truncate text-xs text-white/60">{user.email}</p>
                         <div className="mt-2 flex items-center gap-2 text-[11px]">
-                          <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1 text-white/70">{planLabel}</span>
-                          <span className="text-white/60">{remaining} analyses left</span>
+                          <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1 text-white/75">{planLabel}</span>
+                          <span className="text-white/65">{remaining} analyses left</span>
                         </div>
                       </div>
 
                       <div className="mt-2 grid gap-1 text-sm">
-                        {[
-                          { label: 'Overview', href: '/portal/overview', icon: UserCircle2 },
-                          { label: 'Profile', href: '/portal/profile', icon: UserCircle2 },
-                          { label: 'Settings', href: '/portal/settings', icon: Settings },
-                          { label: 'Security', href: '/portal/security', icon: Shield },
-                          { label: 'Billing', href: '/portal/billing', icon: CreditCard },
-                          { label: 'API Keys', href: '/portal/keys', icon: KeyRound },
-                        ].map(({ label, href, icon: Icon }) => (
+                        {accountLinks.map(({ label, href, icon: Icon }) => (
                           <Link
                             key={href}
                             href={href as Route}
-                            className="flex items-center justify-between rounded-xl px-3 py-2 text-white/80 hover:bg-white/[0.06] hover:text-white"
+                            className="flex min-h-[44px] items-center justify-between rounded-xl px-3 py-2 text-white/80 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60"
                             role="menuitem"
                             onClick={() => setDropdownOpen(false)}
                           >
@@ -219,9 +230,10 @@ export function SiteHeader() {
 
                       <div className="mt-2 border-t border-white/10 pt-2">
                         <button
+                          type="button"
                           onClick={handleLogout}
                           disabled={loggingOut}
-                          className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200 hover:bg-rose-500/15"
+                          className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-200 transition hover:bg-rose-500/15 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <LogOut className="h-4 w-4" />
                           {loggingOut ? 'Signing out...' : 'Sign out'}
@@ -289,15 +301,17 @@ export function SiteHeader() {
               </div>
 
               <nav className="flex flex-col gap-1 p-4 flex-1">
-                {NAV_LINKS.map((link) => (
-                  <a
+                {headerRoutes.map((link) => (
+                  <Link
                     key={link.href}
                     href={link.href}
                     onClick={() => setDrawerOpen(false)}
-                    className="px-4 py-3 text-sm text-white/70"
+                    className={`px-4 py-3 text-sm ${
+                      isActiveRoute(link.href) ? 'text-white bg-white/[0.08] rounded-lg' : 'text-white/70'
+                    }`}
                   >
-                    {link.label}
-                  </a>
+                    {link.headerLabel}
+                  </Link>
                 ))}
 
                 <div className="my-2 border-t border-white/10" />
@@ -307,18 +321,25 @@ export function SiteHeader() {
                 </p>
 
                 {COMPANY_LINKS.map((link) => (
-                  <a
+                  <Link
                     key={link.href}
                     href={link.href}
                     onClick={() => setDrawerOpen(false)}
                     className="px-4 py-3 text-sm text-white/70"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 ))}
               </nav>
 
-              <div className="flex flex-col gap-3 p-4 border-t border-white/10">
+              <div className="mt-auto sticky bottom-0 flex flex-col gap-3 border-t border-white/10 bg-[#0f0f18] p-4">
+                <Link
+                  href={'/analysis' as Route}
+                  onClick={() => setDrawerOpen(false)}
+                  className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-3 text-sm font-medium text-white"
+                >
+                  Analyze now →
+                </Link>
                 {user ? (
                   <>
                     <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/75">
@@ -330,21 +351,14 @@ export function SiteHeader() {
                       </p>
                     </div>
 
-                    {[
-                      ['Overview', '/portal/overview'],
-                      ['Profile', '/portal/profile'],
-                      ['Settings', '/portal/settings'],
-                      ['Security', '/portal/security'],
-                      ['Billing', '/portal/billing'],
-                      ['API Keys', '/portal/keys'],
-                    ].map(([label, href]) => (
+                    {accountLinks.map((link) => (
                       <Link
-                        key={href}
-                        href={href as Route}
+                        key={link.href}
+                        href={link.href as Route}
                         onClick={() => setDrawerOpen(false)}
                         className="text-center text-white/80"
                       >
-                        {label}
+                        {link.label}
                       </Link>
                     ))}
 
