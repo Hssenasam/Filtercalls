@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { FloatingContactWidget } from '@/components/contact/floating-contact-widget';
+import { DomainSaleWidget } from '@/components/sale/domain-sale-widget';
 
 const standaloneRoutes = new Set(['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email']);
 
@@ -22,6 +23,7 @@ export const SiteShell = ({ children }: { children: ReactNode }) => {
       <SiteHeader />
       <main className="mx-auto w-full max-w-6xl px-4 py-10">{children}</main>
       <SiteFooter />
+      <DomainSaleWidget />
       <FloatingContactWidget />
     </div>
   );
